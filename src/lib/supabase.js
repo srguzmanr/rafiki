@@ -1,0 +1,16 @@
+// src/lib/supabase.js
+// Supabase client singleton — import this everywhere, never instantiate directly.
+
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnon) {
+  throw new Error(
+    'Missing Supabase environment variables. ' +
+    'Create a .env.local file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+  )
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnon)
