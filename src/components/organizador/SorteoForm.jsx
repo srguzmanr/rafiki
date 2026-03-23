@@ -1,6 +1,10 @@
-// src/components/sorteos/SorteoForm.jsx
+// src/components/organizador/SorteoForm.jsx
 // Create or edit a sorteo. Handles the full form including prizes.
 // After creation, automatically triggers boleto generation.
+//
+// Giveaway mode: when isGiveaway toggle is on, price_per_boleto is locked
+// to 0. The DB functions (claim_boleto, claim_boleto_online) branch on
+// price_per_boleto = 0 to auto-confirm entries and skip payment.
 //
 // Props:
 //   sorteo   — existing sorteo object (edit mode) or null (create mode)
@@ -37,17 +41,21 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
       cause:            sorteo.cause || '',
       total_boletos:    String(sorteo.total_boletos || 40000),
       price_per_boleto: String(sorteo.price_per_boleto || 300),
-      start_date:       sorteo.start_date ? sorteo.start_date.slice(0, 16) : '',
-      end_date:         sorteo.end_date   ? sorteo.end_date.slice(0, 16)   : '',
+      start_date:       sorteo.start_date  ? sorteo.start_date.slice(0, 16)  : '',
+      end_date:         sorteo.end_date    ? sorteo.end_date.slice(0, 16)    : '',
       drawing_date:     sorteo.drawing_date ? sorteo.drawing_date.slice(0, 16) : '',
       permit_number:    sorteo.permit_number || '',
     }
   })
 
-  const [prizes, setPrizes] = useState([{ ...EMPTY_PRIZE }])
+  // Giveaway toggle — derived from price in edit mode so it reflects DB truth
+  const [isGiveaway, setIsGiveaway] = useState(() =>
+    isEdit ? Number(sorteo.price_per_boleto) === 0 : false
+  )
+
+  const [prizes, setPrizes]               = useState([{ ...EMPTY_PRIZE }])
   const [loadingPrizes, setLoadingPrizes] = useState(isEdit)
 
-  // Load existing prizes in edit mode
   useState(() => {
     if (!isEdit) return
     fetchPrizes(sorteo.id).then(({ data }) => {
@@ -66,10 +74,16 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
   const [saving, setSaving]         = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError]           = useState(null)
-  const [step, setStep]             = useState(null) // 'saving' | 'generating'
+  const [step, setStep]             = useState(null)
 
   function handleField(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+  }
+
+  function handleGiveawayToggle(e) {
+    const checked = e.target.checked
+    setIsGiveaway(checked)
+    setForm(f => ({ ...f, price_per_boleto: checked ? '0' : '300' }))
   }
 
   function handlePrizeField(index, field, value) {
@@ -80,27 +94,26 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
     })
   }
 
-  function addPrize() {
-    setPrizes(prev => [...prev, { ...EMPTY_PRIZE }])
-  }
+  function addPrize()         { setPrizes(prev => [...prev, { ...EMPTY_PRIZE }]) }
+  function removePrize(index) { setPrizes(prev => prev.filter((_, i) => i !== index)) }
 
-  function removePrize(index) {
-    setPrizes(prev => prev.filter((_, i) => i !== index))
-  }
-
-  // Validation
   function validate() {
-    if (!form.title.trim())               return 'El título es requerido.'
+    if (!form.title.trim())
+      return 'El título es requerido.'
     if (!form.total_boletos || Number(form.total_boletos) < 1)
-                                          return 'El número de boletos debe ser mayor a 0.'
+      return 'El número de boletos debe ser mayor a 0.'
     if (Number(form.total_boletos) > 500000)
-                                          return 'El máximo de boletos es 500,000.'
-    if (!form.price_per_boleto || Number(form.price_per_boleto) < 0)
-                                          return 'El precio por boleto es requerido.'
+      return 'El máximo de boletos es 500,000.'
+    // Price must be >= 0. Giveaways are 0, paid sorteos must be > 0.
+    if (form.price_per_boleto === '' || Number(form.price_per_boleto) < 0)
+      return 'El precio por boleto es requerido.'
+    if (!isGiveaway && Number(form.price_per_boleto) === 0)
+      return 'El precio debe ser mayor a 0. Para sorteos gratuitos activa el modo giveaway.'
     if (form.start_date && form.end_date && new Date(form.end_date) <= new Date(form.start_date))
-                                          return 'La fecha de cierre debe ser posterior a la de apertura.'
+      return 'La fecha de cierre debe ser posterior a la de apertura.'
     for (let i = 0; i < prizes.length; i++) {
-      if (!prizes[i].title.trim())        return `Premio ${i + 1}: el título es requerido.`
+      if (!prizes[i].title.trim())
+        return `Premio ${i + 1}: el título es requerido.`
     }
     return null
   }
@@ -110,10 +123,7 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
     setError(null)
 
     const validationError = validate()
-    if (validationError) {
-      setError(validationError)
-      return
-    }
+    if (validationError) { setError(validationError); return }
 
     setSaving(true)
     setStep('saving')
@@ -122,26 +132,21 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
       let sorteoId
 
       if (isEdit) {
-        // Update existing sorteo
-        // Cannot change total_boletos if boletos already generated
         const { data, error } = await updateSorteo(sorteo.id, form)
         if (error) throw error
         sorteoId = data.id
       } else {
-        // Create new sorteo
         const { data, error } = await createSorteo(orgId, userId, form)
         if (error) throw error
         sorteoId = data.id
 
-        // Generate boletos immediately after creation
         setStep('generating')
         setGenerating(true)
 
         const { error: genError } = await generateBoletos(sorteoId)
-        if (genError) throw new Error(`Sorteo creado pero ocurrió un error generando boletos: ${genError.message}`)
+        if (genError) throw new Error(`Sorteo creado pero error generando boletos: ${genError.message}`)
       }
 
-      // Save prizes
       const validPrizes = prizes.filter(p => p.title.trim())
       if (validPrizes.length > 0) {
         const { error: prizeError } = await savePrizes(sorteoId, orgId, validPrizes)
@@ -164,11 +169,8 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      {error && (
-        <div className="alert alert-danger">{error}</div>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* ── Step indicator (create mode only) ── */}
       {!isEdit && isBusy && (
         <div className="alert alert-info d-flex align-items-center mb-4">
           <div className="spinner-border spinner-border-sm me-3" />
@@ -179,7 +181,7 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
         </div>
       )}
 
-      {/* ── Basic info ── */}
+      {/* ── Información básica ── */}
       <div className="card mb-4">
         <div className="card-header"><h6 className="mb-0">Información del sorteo</h6></div>
         <div className="card-body">
@@ -222,11 +224,14 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
               placeholder="Fondos para becas estudiantiles"
               disabled={isBusy}
             />
-            <div className="form-text">Se muestra en la página pública del sorteo para generar confianza.</div>
+            <div className="form-text">Se muestra en la página pública para generar confianza.</div>
           </div>
 
           <div className="mb-3">
-            <label className="form-label fw-medium">Número de permiso (SEGOB u otro)</label>
+            <label className="form-label fw-medium">
+              Número de permiso (SEGOB u otro)
+              {isGiveaway && <span className="text-muted fw-normal ms-2">(opcional para giveaways)</span>}
+            </label>
             <input
               type="text"
               className="form-control"
@@ -245,6 +250,37 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
       <div className="card mb-4">
         <div className="card-header"><h6 className="mb-0">Boletos y precio</h6></div>
         <div className="card-body">
+
+          {/* Giveaway toggle — top of section per spec */}
+          <div className={`form-check form-switch mb-4 p-3 rounded-3 border ${isGiveaway ? 'border-success bg-success bg-opacity-10' : 'border-light bg-light'}`}>
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="giveawayToggle"
+              checked={isGiveaway}
+              onChange={handleGiveawayToggle}
+              disabled={isBusy || (isEdit && sorteo?.boletos_sold > 0)}
+              style={{ width: '2.5em', height: '1.25em' }}
+            />
+            <label className="form-check-label ms-2 fw-medium" htmlFor="giveawayToggle">
+              {isGiveaway
+                ? <><span className="badge bg-success me-2">GRATIS</span>Este es un giveaway (entrada gratuita)</>
+                : 'Este es un giveaway (gratuito)'
+              }
+            </label>
+            {isGiveaway && (
+              <div className="text-success small mt-1 ms-1">
+                Los participantes se confirman al instante. Sin procesamiento de pagos.
+              </div>
+            )}
+            {isEdit && sorteo?.boletos_sold > 0 && (
+              <div className="text-muted small mt-1 ms-1">
+                No se puede cambiar después de tener registros.
+              </div>
+            )}
+          </div>
+
           <div className="row g-3">
             <div className="col-md-6">
               <label className="form-label fw-medium">
@@ -258,7 +294,6 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
                 onChange={handleField}
                 min="1"
                 max="500000"
-                // Disable changing total in edit mode if boletos already exist
                 disabled={isBusy || (isEdit && sorteo?.boletos_sold > 0)}
               />
               {isEdit && sorteo?.boletos_sold > 0 && (
@@ -267,24 +302,35 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
                 </div>
               )}
             </div>
+
             <div className="col-md-6">
               <label className="form-label fw-medium">
-                Precio por boleto (MXN) <span className="text-danger">*</span>
+                {isGiveaway ? 'Entrada' : <>Precio por boleto (MXN) <span className="text-danger">*</span></>}
               </label>
-              <div className="input-group">
-                <span className="input-group-text">$</span>
-                <input
-                  type="number"
-                  className="form-control"
-                  name="price_per_boleto"
-                  value={form.price_per_boleto}
-                  onChange={handleField}
-                  min="0"
-                  step="0.01"
-                  disabled={isBusy}
-                />
-                <span className="input-group-text">MXN</span>
-              </div>
+              {isGiveaway ? (
+                /* Locked display when giveaway — shows "Entrada gratuita", not an editable field */
+                <div
+                  className="form-control bg-light text-success fw-bold"
+                  style={{ cursor: 'default' }}
+                >
+                  Entrada gratuita
+                </div>
+              ) : (
+                <div className="input-group">
+                  <span className="input-group-text">$</span>
+                  <input
+                    type="number"
+                    className="form-control"
+                    name="price_per_boleto"
+                    value={form.price_per_boleto}
+                    onChange={handleField}
+                    min="0.01"
+                    step="0.01"
+                    disabled={isBusy}
+                  />
+                  <span className="input-group-text">MXN</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -307,7 +353,9 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label fw-medium">Cierre de ventas</label>
+              <label className="form-label fw-medium">
+                Cierre de {isGiveaway ? 'participaciones' : 'ventas'}
+              </label>
               <input
                 type="datetime-local"
                 className="form-control"
@@ -360,12 +408,9 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => removePrize(index)}
                     disabled={isBusy}
-                  >
-                    ✕
-                  </button>
+                  >✕</button>
                 )}
               </div>
-
               <div className="row g-2">
                 <div className="col-md-6">
                   <input
@@ -416,9 +461,7 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
           ))}
 
           {!loadingPrizes && prizes.length === 0 && (
-            <p className="text-muted small mb-0">
-              Sin premios aún. Agrega al menos uno.
-            </p>
+            <p className="text-muted small mb-0">Sin premios aún. Agrega al menos uno.</p>
           )}
         </div>
       </div>
@@ -439,7 +482,8 @@ export function SorteoForm({ sorteo, orgId, userId, onSaved, onCancel }) {
           disabled={isBusy}
         >
           {isBusy
-            ? <><span className="spinner-border spinner-border-sm me-2" />{step === 'generating' ? 'Generando boletos...' : 'Guardando...'}</>
+            ? <><span className="spinner-border spinner-border-sm me-2" />
+                {step === 'generating' ? 'Generando boletos...' : 'Guardando...'}</>
             : isEdit ? 'Guardar cambios' : 'Crear sorteo'
           }
         </button>

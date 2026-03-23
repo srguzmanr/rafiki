@@ -25,6 +25,7 @@ export function BoletoCart({ sorteo, cart, onCartChange }) {
 
   const totalAmount = cart.length * Number(sorteo.price_per_boleto)
   const spotsLeft   = MAX_BOLETOS - cart.length
+  const isGiveaway  = Number(sorteo.price_per_boleto) === 0
 
   // ── Check a specific number while typing ──
   function handleNumChange(val) {
@@ -110,7 +111,9 @@ export function BoletoCart({ sorteo, cart, onCartChange }) {
         <div className="mb-4">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <span className="fw-bold">Tus boletos ({cart.length})</span>
-            <span className="text-success fw-bold">{formatMXN(totalAmount)}</span>
+            {!isGiveaway && (
+              <span className="text-success fw-bold">{formatMXN(totalAmount)}</span>
+            )}
           </div>
           <div className="d-flex flex-wrap gap-2">
             {[...cart].sort((a, b) => a - b).map(n => (

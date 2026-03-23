@@ -196,6 +196,7 @@ export async function fetchReportSales(sorteoId) {
       amount_mxn,
       payment_status,
       sale_channel,
+      marketing_consent,
       created_at,
       vendedor_id,
       profiles!sales_vendedor_id_fkey ( full_name )
@@ -227,7 +228,7 @@ export async function exportSalesCSV(sorteoId, sorteoTitle) {
 
   const headers = [
     'Boleto', 'Comprador', 'Telefono', 'Correo',
-    'Monto MXN', 'Estado Pago', 'Canal', 'Vendedor', 'Fecha y Hora',
+    'Monto MXN', 'Estado Pago', 'Canal', 'Vendedor', 'Acepta marketing', 'Fecha y Hora',
   ]
 
   const rows = data.map(s => [
@@ -239,6 +240,7 @@ export async function exportSalesCSV(sorteoId, sorteoTitle) {
     s.payment_status,
     s.sale_channel,
     s.profiles?.full_name || '(online)',
+    s.marketing_consent === false ? 'No' : 'Sí',
     new Date(s.created_at).toLocaleString('es-MX', {
       timeZone: 'America/Hermosillo',
       year: 'numeric', month: '2-digit', day: '2-digit',

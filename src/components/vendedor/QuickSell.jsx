@@ -114,16 +114,18 @@ export function QuickSell({ sorteo, vendedorId, onSaleComplete, onBack }) {
     setSubmitError(null)
   }
 
+  const isGiveaway = Number(sorteo.price_per_boleto) === 0
+
   // ── Submit the sale ──
   async function handleSubmit() {
     if (!selectedNum) return
-    if (!buyerName.trim()) {
-      setSubmitError('El nombre del comprador es requerido.')
+    if (!buyerName.trim() || buyerName.trim().split(/\s+/).filter(Boolean).length < 2) {
+      setSubmitError('Nombre completo (nombre y apellido).')
       nameInputRef.current?.focus()
       return
     }
-    if (!buyerPhone.trim()) {
-      setSubmitError('El teléfono del comprador es requerido.')
+    if (!buyerPhone.trim() || buyerPhone.trim().replace(/\D/g, '').length < 10) {
+      setSubmitError('El teléfono debe tener al menos 10 dígitos.')
       return
     }
 
@@ -156,7 +158,10 @@ export function QuickSell({ sorteo, vendedorId, onSaleComplete, onBack }) {
   }
 
   // ── Can submit? ──
-  const canSubmit = selectedNum && buyerName.trim() && buyerPhone.trim() && !submitting
+  const canSubmit = selectedNum
+    && buyerName.trim().split(/\s+/).filter(Boolean).length >= 2
+    && buyerPhone.trim().replace(/\D/g, '').length >= 10
+    && !submitting
 
   // ── Availability indicator ──
   const AvailBadge = useCallback(() => {
@@ -345,8 +350,10 @@ export function QuickSell({ sorteo, vendedorId, onSaleComplete, onBack }) {
           {submitting
             ? <><span className="spinner-border spinner-border-sm me-2" />Registrando...</>
             : canSubmit
-            ? `✓ Confirmar venta — Boleto #${selectedNum} · ${formatMXN(sorteo.price_per_boleto)}`
-            : 'Confirmar venta'
+            ? isGiveaway
+              ? `✓ Registrar — Boleto #${selectedNum}`
+              : `✓ Confirmar venta — Boleto #${selectedNum} · ${formatMXN(sorteo.price_per_boleto)}`
+            : isGiveaway ? 'Registrar' : 'Confirmar venta'
           }
         </button>
       </div>

@@ -12,20 +12,25 @@
 import { formatMXN, SalesProgressBar } from '../shared/UI'
 
 export function SorteoSelector({ sorteos, todayStats, onSelectSorteo }) {
+  const allGiveaways = sorteos.length > 0 && sorteos.every(s => Number(s.price_per_boleto) === 0)
   return (
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
       {/* Today's stats banner */}
       <div className="bg-primary text-white rounded-3 p-3 mb-4">
         <div className="row text-center g-0">
-          <div className="col-6 border-end border-white border-opacity-25">
+          <div className={allGiveaways ? "col-12 text-center" : "col-6 border-end border-white border-opacity-25"}>
             <div className="fs-2 fw-bold">{todayStats.count}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>ventas hoy</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>
+              {allGiveaways ? 'registros hoy' : 'ventas hoy'}
+            </div>
           </div>
-          <div className="col-6">
-            <div className="fs-2 fw-bold">{formatMXN(todayStats.amount_mxn)}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>recaudado hoy</div>
-          </div>
+          {!allGiveaways && (
+            <div className="col-6">
+              <div className="fs-2 fw-bold">{formatMXN(todayStats.amount_mxn)}</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>recaudado hoy</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -73,10 +78,16 @@ export function SorteoSelector({ sorteos, todayStats, onSelectSorteo }) {
                   )}
                 </div>
                 <div className="text-end ms-2 flex-shrink-0">
-                  <div className="fw-bold text-primary" style={{ fontSize: '1.1rem' }}>
-                    {formatMXN(sorteo.price_per_boleto)}
-                  </div>
-                  <div className="text-muted" style={{ fontSize: '0.7rem' }}>por boleto</div>
+                  {Number(sorteo.price_per_boleto) === 0 ? (
+                    <div className="fw-bold text-success" style={{ fontSize: '1.1rem' }}>GRATIS</div>
+                  ) : (
+                    <>
+                      <div className="fw-bold text-primary" style={{ fontSize: '1.1rem' }}>
+                        {formatMXN(sorteo.price_per_boleto)}
+                      </div>
+                      <div className="text-muted" style={{ fontSize: '0.7rem' }}>por boleto</div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -94,7 +105,7 @@ export function SorteoSelector({ sorteos, todayStats, onSelectSorteo }) {
                   {Number(sorteo.boletos_available).toLocaleString('es-MX')} disponibles
                 </span>
                 <span className="text-primary small fw-medium">
-                  Vender →
+                  {Number(sorteo.price_per_boleto) === 0 ? 'Registrar →' : 'Vender →'}
                 </span>
               </div>
             </div>

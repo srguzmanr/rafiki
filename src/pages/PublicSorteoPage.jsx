@@ -2,24 +2,31 @@
 //
 // Public-facing page for a single sorteo.
 // Accessible without auth: /sorteo/:orgSlug/:sorteoId
-// Shows prizes, stats, permit number, cause, and the buy CTA.
-// Switches to PurchaseFlow when buyer taps "Comprar boletos".
+//
+// Giveaway mode (price_per_boleto === 0):
+//   - "GRATIS" badge next to title
+//   - Stats: hides "$0.00 por boleto", shows "GRATIS" instead
+//   - CTA: "Participar gratis" instead of "Comprar boletos — $X c/u"
+//   - Dates: "Cierre de participaciones" instead of "Cierre de ventas"
+//   - Closed/drawn labels updated accordingly
 
-import { useState, useEffect } from 'react'
-import { useParams, Link }     from 'react-router-dom'
-import { useAuth }             from '../context/AuthContext'
-import { fetchPublicSorteo }   from '../lib/participanteApi'
-import { PurchaseFlow }        from '../components/participante/PurchaseFlow'
-import { LoadingSpinner, ErrorMessage, StatusBadge, SalesProgressBar, formatMXN } from '../components/shared/UI'
+import { useState, useEffect }  from 'react'
+import { useParams, Link }       from 'react-router-dom'
+import { useAuth }               from '../context/AuthContext'
+import { fetchPublicSorteo }     from '../lib/participanteApi'
+import { PurchaseFlow }          from '../components/participante/PurchaseFlow'
+import {
+  LoadingSpinner, ErrorMessage, StatusBadge, SalesProgressBar, formatMXN,
+} from '../components/shared/UI'
 
 export function PublicSorteoPage() {
   const { orgSlug, sorteoId } = useParams()
   const { user, session }     = useAuth()
 
-  const [sorteo, setSorteo]     = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
-  const [buying, setBuying]     = useState(false)
+  const [sorteo, setSorteo]   = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
+  const [buying, setBuying]   = useState(false)
 
   async function loadSorteo() {
     setLoading(true)
@@ -44,10 +51,11 @@ export function PublicSorteoPage() {
   )
   if (!sorteo) return null
 
-  const prizes = Array.isArray(sorteo.prizes) ? sorteo.prizes : []
-  const canBuy  = sorteo.status === 'active'
+  const prizes      = Array.isArray(sorteo.prizes) ? sorteo.prizes : []
+  const canBuy      = sorteo.status === 'active'
+  const isGiveaway  = Number(sorteo.price_per_boleto) === 0
 
-  // ── Purchase flow ──
+  // ── Purchase / entry flow ──
   if (buying) return (
     <div className="min-vh-100 bg-light">
       <div className="container py-4" style={{ maxWidth: 540 }}>
@@ -61,27 +69,31 @@ export function PublicSorteoPage() {
     </div>
   )
 
-  // ── Sorteo detail ──
   return (
     <div className="min-vh-100 bg-light">
-      {/* Sticky header */}
+      {/* ── Sticky nav ── */}
       <nav className="navbar navbar-light bg-white border-bottom px-3 py-2">
         <Link to={`/org/${orgSlug}`} className="text-decoration-none text-primary">
           ← {sorteo.org_name}
         </Link>
         <span className="navbar-brand fw-bold mb-0 mx-auto">Rafiki</span>
-        <div style={{ width: 80 }} /> {/* balance the back link */}
+        <div style={{ width: 80 }} />
       </nav>
 
       <div className="container py-4" style={{ maxWidth: 640 }}>
 
-        {/* Title + status */}
-        <div className="d-flex justify-content-between align-items-start mb-2">
-          <h2 className="fw-bold mb-0">{sorteo.title}</h2>
+        {/* ── Title + status ── */}
+        <div className="d-flex justify-content-between align-items-start mb-2 gap-2 flex-wrap">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <h2 className="fw-bold mb-0">{sorteo.title}</h2>
+            {isGiveaway && (
+              <span className="badge bg-success fs-6">Gratis</span>
+            )}
+          </div>
           <StatusBadge status={sorteo.status} />
         </div>
 
-        {/* Org + permit */}
+        {/* ── Org + permit ── */}
         <p className="text-muted small mb-1">{sorteo.org_name}</p>
         {sorteo.permit_number && (
           <p className="text-muted small mb-3">
@@ -89,7 +101,7 @@ export function PublicSorteoPage() {
           </p>
         )}
 
-        {/* Cause */}
+        {/* ── Cause ── */}
         {sorteo.cause && (
           <div className="alert alert-success py-2 mb-4 d-flex align-items-center gap-2">
             <span>🎯</span>
@@ -97,21 +109,38 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* Sales progress */}
+        {/* ── Stats ── */}
         <div className="card mb-4">
           <div className="card-body">
             <div className="row text-center g-0 mb-3">
               <div className="col-4 border-end">
-                <div className="fw-bold fs-5">{Number(sorteo.boletos_sold || 0).toLocaleString('es-MX')}</div>
-                <div className="text-muted" style={{ fontSize: '0.75rem' }}>vendidos</div>
+                <div className="fw-bold fs-5">
+                  {Number(sorteo.boletos_sold || 0).toLocaleString('es-MX')}
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                  {isGiveaway ? 'participantes' : 'vendidos'}
+                </div>
               </div>
               <div className="col-4 border-end">
-                <div className="fw-bold fs-5">{Number(sorteo.boletos_available || 0).toLocaleString('es-MX')}</div>
+                <div className="fw-bold fs-5">
+                  {Number(sorteo.boletos_available || 0).toLocaleString('es-MX')}
+                </div>
                 <div className="text-muted" style={{ fontSize: '0.75rem' }}>disponibles</div>
               </div>
               <div className="col-4">
-                <div className="fw-bold fs-5 text-primary">{formatMXN(sorteo.price_per_boleto)}</div>
-                <div className="text-muted" style={{ fontSize: '0.75rem' }}>por boleto</div>
+                {isGiveaway ? (
+                  <>
+                    <div className="fw-bold fs-5 text-success">GRATIS</div>
+                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>entrada</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fw-bold fs-5 text-primary">
+                      {formatMXN(sorteo.price_per_boleto)}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>por boleto</div>
+                  </>
+                )}
               </div>
             </div>
             <SalesProgressBar
@@ -122,17 +151,19 @@ export function PublicSorteoPage() {
           </div>
         </div>
 
-        {/* Key dates */}
+        {/* ── Key dates ── */}
         {(sorteo.drawing_date || sorteo.end_date) && (
           <div className="card mb-4">
             <div className="card-body py-3">
               <div className="row g-2 text-center">
                 {sorteo.end_date && (
                   <div className="col-6">
-                    <div className="text-muted small">Cierre de ventas</div>
+                    <div className="text-muted small">
+                      {isGiveaway ? 'Cierre de participaciones' : 'Cierre de ventas'}
+                    </div>
                     <div className="fw-medium">
                       {new Date(sorteo.end_date).toLocaleDateString('es-MX', {
-                        day: 'numeric', month: 'long', year: 'numeric'
+                        day: 'numeric', month: 'long', year: 'numeric',
                       })}
                     </div>
                   </div>
@@ -142,7 +173,7 @@ export function PublicSorteoPage() {
                     <div className="text-muted small">Fecha del sorteo</div>
                     <div className="fw-medium">
                       {new Date(sorteo.drawing_date).toLocaleDateString('es-MX', {
-                        day: 'numeric', month: 'long', year: 'numeric'
+                        day: 'numeric', month: 'long', year: 'numeric',
                       })}
                     </div>
                   </div>
@@ -152,7 +183,7 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* Prizes */}
+        {/* ── Prizes ── */}
         {prizes.length > 0 && (
           <div className="mb-4">
             <h5 className="fw-bold mb-3">Premios</h5>
@@ -192,7 +223,7 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* Description */}
+        {/* ── Description ── */}
         {sorteo.description && (
           <div className="mb-4">
             <h5 className="fw-bold mb-2">Acerca de este sorteo</h5>
@@ -200,7 +231,7 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* Winner (if drawn) */}
+        {/* ── Winner (if drawn) ── */}
         {sorteo.status === 'drawn' && sorteo.drawing_result && (
           <div className="alert alert-primary mb-4">
             <h6 className="fw-bold">🎉 Resultado</h6>
@@ -212,7 +243,7 @@ export function PublicSorteoPage() {
 
       </div>
 
-      {/* ── Sticky buy CTA ── */}
+      {/* ── Sticky CTA ── */}
       <div
         className="position-sticky bg-white border-top px-3 py-3"
         style={{ bottom: 0, zIndex: 50 }}
@@ -220,15 +251,18 @@ export function PublicSorteoPage() {
         <div className="container" style={{ maxWidth: 640 }}>
           {canBuy ? (
             <button
-              className="btn btn-primary w-100"
+              className={`btn w-100 ${isGiveaway ? 'btn-success' : 'btn-primary'}`}
               onClick={() => setBuying(true)}
               style={{ minHeight: 52, fontSize: '1rem', fontWeight: 700 }}
             >
-              Comprar boletos — {formatMXN(sorteo.price_per_boleto)} c/u
+              {isGiveaway
+                ? 'Participar gratis'
+                : `Comprar boletos — ${formatMXN(sorteo.price_per_boleto)} c/u`
+              }
             </button>
           ) : (
             <div className="text-center text-muted">
-              {sorteo.status === 'closed' && 'Ventas cerradas'}
+              {sorteo.status === 'closed' && (isGiveaway ? 'Participaciones cerradas' : 'Ventas cerradas')}
               {sorteo.status === 'drawn'  && '✓ Sorteo realizado'}
               {sorteo.status === 'draft'  && 'Próximamente'}
             </div>

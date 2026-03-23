@@ -89,7 +89,10 @@ export function PublicOrgPage() {
                   )}
 
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="text-primary fw-bold">{formatMXN(sorteo.price_per_boleto)}</span>
+                    {Number(sorteo.price_per_boleto) === 0
+                      ? <span className="badge bg-success fs-6 px-2 py-1">GRATIS</span>
+                      : <span className="text-primary fw-bold">{formatMXN(sorteo.price_per_boleto)}</span>
+                    }
                     {sorteo.drawing_date && (
                       <span className="text-muted small">
                         Sorteo: {new Date(sorteo.drawing_date).toLocaleDateString('es-MX', {
@@ -107,7 +110,9 @@ export function PublicOrgPage() {
 
                   {sorteo.status === 'active' && (
                     <div className="text-end mt-2">
-                      <span className="text-primary small fw-medium">Ver y comprar →</span>
+                      <span className="text-primary small fw-medium">
+                        {Number(sorteo.price_per_boleto) === 0 ? 'Ver y participar →' : 'Ver y comprar →'}
+                      </span>
                     </div>
                   )}
                 </div>

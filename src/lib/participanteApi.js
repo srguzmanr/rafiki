@@ -52,15 +52,17 @@ export async function fetchNextAvailableBoletos(sorteoId, count = 1) {
 // ─── PURCHASE ──────────────────────────────────────────────────────────────
 
 export async function claimBoletosOnline({
-  sorteoId, numeros, buyerName, buyerPhone, buyerEmail, participanteId = null,
+  sorteoId, numeros, buyerName, buyerPhone, buyerEmail,
+  participanteId = null, marketingConsent = true,
 }) {
   const { data, error } = await supabase.rpc('claim_boleto_online', {
-    p_sorteo_id:       sorteoId,
-    p_numeros:         numeros,
-    p_buyer_name:      buyerName,
-    p_buyer_phone:     buyerPhone,
-    p_buyer_email:     buyerEmail || null,
-    p_participante_id: participanteId,
+    p_sorteo_id:          sorteoId,
+    p_numeros:            numeros,
+    p_buyer_name:         buyerName,
+    p_buyer_phone:        buyerPhone,
+    p_buyer_email:        buyerEmail || null,
+    p_participante_id:    participanteId,
+    p_marketing_consent:  marketingConsent,
   })
 
   if (error) return { data: null, error, unavailable: [] }

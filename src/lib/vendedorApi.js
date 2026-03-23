@@ -94,14 +94,16 @@ export async function claimBoleto({
   buyerName,
   buyerPhone,
   buyerEmail = null,
+  marketingConsent = true,
 }) {
   const { data, error } = await supabase.rpc('claim_boleto', {
-    p_sorteo_id:   sorteoId,
-    p_numero:      numero,
-    p_vendedor_id: vendedorId,
-    p_buyer_name:  buyerName,
-    p_buyer_phone: buyerPhone,
-    p_buyer_email: buyerEmail || null,
+    p_sorteo_id:          sorteoId,
+    p_numero:             numero,
+    p_vendedor_id:        vendedorId,
+    p_buyer_name:         buyerName,
+    p_buyer_phone:        buyerPhone,
+    p_buyer_email:        buyerEmail || null,
+    p_marketing_consent:  marketingConsent,
   })
 
   if (error) return { data: null, error }
