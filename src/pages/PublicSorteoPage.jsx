@@ -62,8 +62,8 @@ export function PublicSorteoPage() {
         <PurchaseFlow
           sorteo={sorteo}
           participanteId={session ? user?.id : null}
-          onComplete={() => { loadSorteo() }}
-          onBack={() => setBuying(false)}
+          onComplete={() => {}}
+          onBack={() => { setBuying(false); loadSorteo() }}
         />
       </div>
     </div>
