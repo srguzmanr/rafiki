@@ -242,7 +242,7 @@ export function AdminDashboard() {
 
   return (
     <div className="min-vh-100 bg-light">
-      <nav className="navbar navbar-dark bg-dark px-4 py-2">
+      <nav className="navbar navbar-dark navbar-rafiki px-4 py-2">
         <span className="navbar-brand fw-bold mb-0">Rafiki — Admin</span>
         <button className="btn btn-sm btn-outline-light ms-auto" onClick={signOut}>Salir</button>
       </nav>

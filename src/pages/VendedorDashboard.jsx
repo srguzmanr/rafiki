@@ -115,7 +115,7 @@ export function VendedorDashboard() {
 
       {/* ── Navbar ── */}
       <nav
-        className="navbar navbar-dark bg-primary px-3 py-2"
+        className="navbar navbar-dark navbar-rafiki px-3 py-2"
         style={{ position: 'sticky', top: 0, zIndex: 100 }}
       >
         <div className="d-flex align-items-center gap-2 w-100">
