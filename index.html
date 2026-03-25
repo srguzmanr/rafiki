@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rafiki — Sorteos</title>
+    <title>Rafiki — Tu Central de Rifas</title>
+    <link rel="icon" type="image/png" href="/rafiki/RafikiIcon01.png" />
 
     <!-- Bootstrap 5 CSS -->
     <link
@@ -11,11 +12,71 @@
       rel="stylesheet"
     />
 
-    <!-- System font stack — no external font downloads -->
+    <!-- Rafiki brand overrides -->
     <style>
+      :root {
+        --bs-primary: #49A446;
+        --bs-primary-rgb: 73, 164, 70;
+        --bs-link-color: #49A446;
+        --bs-link-hover-color: #1F4E29;
+      }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
+      }
+
+      /* Primary button */
+      .btn-primary {
+        background-color: #49A446;
+        border-color: #49A446;
+      }
+      .btn-primary:hover, .btn-primary:active, .btn-primary:focus {
+        background-color: #1F4E29;
+        border-color: #1F4E29;
+      }
+      .btn-outline-primary {
+        color: #49A446;
+        border-color: #49A446;
+      }
+      .btn-outline-primary:hover {
+        background-color: #49A446;
+        border-color: #49A446;
+        color: #fff;
+      }
+
+      /* Links */
+      a { color: #49A446; }
+      a:hover { color: #1F4E29; }
+
+      /* Spinner, badges, accents */
+      .text-primary { color: #49A446 !important; }
+      .bg-primary { background-color: #49A446 !important; }
+      .border-primary { border-color: #49A446 !important; }
+      .spinner-border.text-primary { color: #49A446 !important; }
+
+      /* Navbar override — dark green */
+      .navbar-rafiki {
+        background-color: #1F4E29;
+      }
+
+      /* Salmon accent for CTAs that need contrast */
+      .btn-rafiki-salmon {
+        background-color: #F2644E;
+        border-color: #F2644E;
+        color: #fff;
+      }
+      .btn-rafiki-salmon:hover {
+        background-color: #d94e3a;
+        border-color: #d94e3a;
+        color: #fff;
+      }
+
+      /* Badge for giveaways */
+      .badge-giveaway {
+        background-color: #FCD12A;
+        color: #1F4E29;
+        font-weight: 600;
       }
     </style>
   </head>
