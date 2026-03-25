@@ -6,7 +6,7 @@ export default defineConfig({
 
   // GitHub Pages deploys to /rafiki/ subdirectory
   // Set this to '/' if using a custom domain
-  base: '/rafiki/',
+  base: '/',
 
   build: {
     outDir: 'dist',
