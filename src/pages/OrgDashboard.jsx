@@ -77,7 +77,7 @@ export function OrgDashboard() {
     <div className="min-vh-100 bg-light">
 
       {/* Navbar */}
-      <nav className="navbar navbar-dark bg-primary px-3 py-2">
+      <nav className="navbar navbar-dark navbar-rafiki px-3 py-2">
         <div className="d-flex align-items-center gap-2 w-100">
           {view !== VIEW.LIST && (
             <button
