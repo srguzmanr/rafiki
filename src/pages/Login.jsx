@@ -31,10 +31,10 @@ export function Login() {
     <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center p-3">
       <div style={{ width: '100%', maxWidth: 400 }}>
 
-        {/* Logo / wordmark */}
+       {/* Logo / wordmark */}
         <div className="text-center mb-4">
-          <h1 className="fw-bold text-primary">Rafiki</h1>
-          <p className="text-muted">Plataforma de sorteos</p>
+          <img src="/RafikiLogos03.png" alt="Rafiki" style={{ height: 60 }} className="mb-2" />
+          <p className="text-muted">Tu Central de Rifas</p>
         </div>
 
         <div className="card shadow-sm">
