@@ -11,7 +11,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Share2, Link2, Check, Trophy } from 'lucide-react'
+import { Share2, Link2, Check, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
+import { fetchSorteoImages, getImageUrl } from '../lib/storage'
 
 function getCountdownLabel(endDate, status) {
   if (status === 'drawn') return 'Sorteado'
@@ -80,15 +81,22 @@ export function PublicSorteoPage() {
   const { orgSlug, sorteoId } = useParams()
   const { user, session } = useAuth()
   const [sorteo, setSorteo] = useState(null)
+  const [sorteoImages, setSorteoImages] = useState([])
+  const [imageIndex, setImageIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [buying, setBuying] = useState(false)
 
   async function loadSorteo() {
     setLoading(true); setError(null)
-    const { data, error } = await fetchPublicSorteo(sorteoId)
-    if (error) setError('Sorteo no encontrado o no disponible.')
-    else setSorteo(data)
+    const [sorteoRes, imagesRes] = await Promise.all([
+      fetchPublicSorteo(sorteoId),
+      fetchSorteoImages(sorteoId),
+    ])
+    if (sorteoRes.error) setError('Sorteo no encontrado o no disponible.')
+    else setSorteo(sorteoRes.data)
+    setSorteoImages(imagesRes.data || [])
+    setImageIndex(0)
     setLoading(false)
   }
 
@@ -134,6 +142,35 @@ export function PublicSorteoPage() {
         <img src="/RafikiLogos03.png" alt="Rafiki" className="h-7 mx-auto" />
         <div className="w-20" />
       </nav>
+
+      {/* Image gallery */}
+      {sorteoImages.length > 0 && (
+        <div className="relative bg-black">
+          <img
+            src={getImageUrl(sorteoImages[imageIndex].storage_path)}
+            alt={sorteo.title}
+            className="w-full h-56 md:h-72 object-contain mx-auto"
+          />
+          {sorteoImages.length > 1 && (
+            <>
+              <button onClick={() => setImageIndex(i => (i - 1 + sorteoImages.length) % sorteoImages.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button onClick={() => setImageIndex(i => (i + 1) % sorteoImages.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {sorteoImages.map((_, i) => (
+                  <button key={i} onClick={() => setImageIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-colors ${i === imageIndex ? 'bg-white' : 'bg-white/40'}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="max-w-[640px] mx-auto px-4 py-4">
         {/* Title + status */}

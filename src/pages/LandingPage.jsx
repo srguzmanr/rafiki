@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchAllPublicSorteos } from '../lib/sorteosApi'
+import { fetchAllSorteoImages, getImageUrl } from '../lib/storage'
 import { SorteoCard } from '../components/SorteoCard'
 import { WhatsAppButton } from '../components/WhatsAppButton'
 import { LoadingSpinner } from '../components/shared/UI'
@@ -22,20 +23,32 @@ const WA_CTA = 'https://wa.me/524421568386?text=Hola%2C%20quiero%20crear%20mi%20
 
 export function LandingPage() {
   const [sorteos, setSorteos] = useState([])
+  const [coverImages, setCoverImages] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('todos')
   const [sort, setSort] = useState('recientes')
 
   useEffect(() => {
-    fetchAllPublicSorteos().then(({ data, error }) => {
-      if (error) {
-        console.error('[LandingPage] Failed to load sorteos:', error)
-        setError('No se pudieron cargar los sorteos.')
+    Promise.all([fetchAllPublicSorteos(), fetchAllSorteoImages()]).then(
+      ([sorteosRes, imagesRes]) => {
+        if (sorteosRes.error) {
+          console.error('[LandingPage] Failed to load sorteos:', sorteosRes.error)
+          setError('No se pudieron cargar los sorteos.')
+        }
+        setSorteos(sorteosRes.data || [])
+
+        // Build map: sorteo_id → first image URL
+        const covers = {}
+        for (const img of (imagesRes.data || [])) {
+          if (!covers[img.sorteo_id]) {
+            covers[img.sorteo_id] = getImageUrl(img.storage_path)
+          }
+        }
+        setCoverImages(covers)
+        setLoading(false)
       }
-      setSorteos(data || [])
-      setLoading(false)
-    })
+    )
   }, [])
 
   const activeSorteos = useMemo(() => {
@@ -174,7 +187,7 @@ export function LandingPage() {
             <LoadingSpinner message="Cargando sorteos..." />
           ) : activeSorteos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeSorteos.map(s => <SorteoCard key={s.id} sorteo={s} />)}
+              {activeSorteos.map(s => <SorteoCard key={s.id} sorteo={s} coverImageUrl={coverImages[s.id]} />)}
             </div>
           ) : (
             <Card className="py-16 text-center">
