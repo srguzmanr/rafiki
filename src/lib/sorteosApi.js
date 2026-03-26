@@ -265,6 +265,39 @@ export async function exportSalesCSV(sorteoId, sorteoTitle) {
   return { error: null }
 }
 
+// ─── DRAW WINNERS ──────────────────────────────────────────────────────────
+
+/**
+ * Execute the sorteo drawing. Selects random winners for each prize.
+ * Sorteo must be in 'closed' status. One-shot — cannot be re-run.
+ * Returns { drawing_result } on success.
+ */
+export async function drawWinners(sorteoId) {
+  const { data, error } = await supabase.rpc('draw_winners', {
+    p_sorteo_id: sorteoId,
+  })
+
+  if (error) return { data: null, error }
+
+  if (!data?.success) {
+    const messages = {
+      not_authenticated:    'Debes iniciar sesión.',
+      sorteo_not_found:     'Sorteo no encontrado.',
+      permission_denied:    data?.detail || 'No tienes permiso para realizar este sorteo.',
+      already_drawn:        'Este sorteo ya fue realizado.',
+      sorteo_not_closed:    data?.detail || 'El sorteo debe estar cerrado primero.',
+      no_eligible_boletos:  'No hay boletos vendidos para realizar el sorteo.',
+      not_enough_boletos:   'No hay suficientes boletos vendidos para cubrir todos los premios.',
+    }
+    return {
+      data: null,
+      error: new Error(messages[data?.reason] || data?.detail || 'Error al realizar el sorteo.'),
+    }
+  }
+
+  return { data, error: null }
+}
+
 // ─── ADMIN ─────────────────────────────────────────────────────────────────
 
 /**
