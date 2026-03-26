@@ -1,33 +1,24 @@
 // src/components/vendedor/SalesHistory.jsx
-//
-// Vendedor's personal sales history for a sorteo.
-// Shows who bought what, when. Grouped by day for easy cash reconciliation.
-// Search by buyer name or boleto number — for when a buyer calls with a question.
-//
-// Props:
-//   sales    — array of sale records for this vendedor + sorteo
-//   sorteo   — the sorteo object
-//   onBack() — return to QuickSell
 
 import { useState, useMemo } from 'react'
 import { formatMXN } from '../shared/UI'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft } from 'lucide-react'
 
 export function SalesHistory({ sales, sorteo, onBack }) {
   const [search, setSearch] = useState('')
 
-  // Filter by buyer name or boleto number
   const filtered = useMemo(() => {
     if (!search.trim()) return sales
     const q = search.toLowerCase()
-    return sales.filter(
-      s =>
-        s.buyer_name.toLowerCase().includes(q) ||
-        String(s.boleto_numero).includes(q) ||
-        s.buyer_phone.includes(q)
+    return sales.filter(s =>
+      s.buyer_name.toLowerCase().includes(q) || String(s.boleto_numero).includes(q) || s.buyer_phone.includes(q)
     )
   }, [sales, search])
 
-  // Group filtered sales by day (most recent first)
   const byDay = useMemo(() => {
     const groups = {}
     for (const sale of filtered) {
@@ -40,119 +31,82 @@ export function SalesHistory({ sales, sorteo, onBack }) {
     return Object.entries(groups)
   }, [filtered])
 
-  const totalAmount = sales
-    .filter(s => s.payment_status !== 'refunded')
-    .reduce((sum, s) => sum + Number(s.amount_mxn), 0)
+  const totalAmount = sales.filter(s => s.payment_status !== 'refunded').reduce((sum, s) => sum + Number(s.amount_mxn), 0)
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto' }}>
-
-      {/* Header */}
-      <div className="d-flex align-items-center gap-2 mb-3">
-        <button
-          className="btn btn-sm btn-outline-secondary"
-          onClick={onBack}
-          style={{ minWidth: 36, minHeight: 36 }}
-        >
-          ←
-        </button>
+    <div className="max-w-[480px] mx-auto">
+      <div className="flex items-center gap-2 mb-3">
+        <Button variant="outline" size="icon" onClick={onBack} className="shrink-0 h-9 w-9">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
         <div>
-          <div className="fw-bold">Mis ventas</div>
-          <div className="text-muted small">{sorteo.title}</div>
+          <div className="font-bold">Mis ventas</div>
+          <div className="text-muted-foreground text-sm">{sorteo.title}</div>
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="row g-2 mb-3">
-        <div className="col-6">
-          <div className="bg-primary text-white rounded-3 p-3 text-center">
-            <div className="fs-3 fw-bold">{sales.length}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>boletos vendidos</div>
-          </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-primary text-white rounded-xl p-3 text-center">
+          <div className="text-3xl font-bold">{sales.length}</div>
+          <div className="text-sm opacity-85">boletos vendidos</div>
         </div>
-        <div className="col-6">
-          <div className="bg-success text-white rounded-3 p-3 text-center">
-            <div className="fs-4 fw-bold">{formatMXN(totalAmount)}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>total recaudado</div>
-          </div>
+        <div className="bg-emerald-600 text-white rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold">{formatMXN(totalAmount)}</div>
+          <div className="text-sm opacity-85">total recaudado</div>
         </div>
       </div>
 
-      {/* Search */}
       {sales.length > 0 && (
         <div className="mb-3">
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Buscar por nombre, boleto o teléfono..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ minHeight: 44 }}
+          <Input
+            type="search" placeholder="Buscar por nombre, boleto o teléfono..."
+            value={search} onChange={e => setSearch(e.target.value)} className="h-11"
           />
         </div>
       )}
 
-      {/* Empty state */}
       {sales.length === 0 && (
-        <div className="text-center py-5">
-          <div style={{ fontSize: '2.5rem' }}>📋</div>
-          <p className="text-muted mt-2">Aún no tienes ventas registradas.</p>
+        <div className="text-center py-12">
+          <div className="text-5xl">📋</div>
+          <p className="text-muted-foreground mt-2">Aún no tienes ventas registradas.</p>
         </div>
       )}
 
-      {/* No search results */}
       {sales.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-4">
-          <p className="text-muted">Sin resultados para "{search}".</p>
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Sin resultados para "{search}".</p>
         </div>
       )}
 
-      {/* Sales grouped by day */}
       {byDay.map(([day, daySales]) => (
         <div key={day} className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h6 className="text-muted text-capitalize mb-0" style={{ fontSize: '0.8rem' }}>
-              {day}
-            </h6>
-            <span className="text-muted small">
-              {daySales.length} venta{daySales.length !== 1 ? 's' : ''} ·{' '}
-              {formatMXN(daySales.reduce((s, v) => s + Number(v.amount_mxn), 0))}
+          <div className="flex justify-between items-center mb-2">
+            <h6 className="text-muted-foreground capitalize text-xs">{day}</h6>
+            <span className="text-muted-foreground text-sm">
+              {daySales.length} venta{daySales.length !== 1 ? 's' : ''} · {formatMXN(daySales.reduce((s, v) => s + Number(v.amount_mxn), 0))}
             </span>
           </div>
-
-          <div className="d-flex flex-column gap-2">
+          <div className="flex flex-col gap-2">
             {daySales.map(sale => (
-              <div key={sale.id} className="card border-0 bg-white shadow-sm">
-                <div className="card-body py-2 px-3">
-                  <div className="d-flex justify-content-between align-items-center">
+              <Card key={sale.id} className="border-0 shadow-sm">
+                <CardContent className="py-2 px-3">
+                  <div className="flex justify-between items-center">
                     <div>
-                      <div className="fw-medium">{sale.buyer_name}</div>
-                      <div className="text-muted small">{sale.buyer_phone}</div>
+                      <div className="font-medium">{sale.buyer_name}</div>
+                      <div className="text-muted-foreground text-sm">{sale.buyer_phone}</div>
                     </div>
-                    <div className="text-end ms-3 flex-shrink-0">
-                      <div className="fw-bold text-primary">#{sale.boleto_numero}</div>
-                      <div className="text-success small fw-medium">
-                        {formatMXN(sale.amount_mxn)}
-                      </div>
+                    <div className="text-right ml-3 shrink-0">
+                      <div className="font-bold text-primary">#{sale.boleto_numero}</div>
+                      <div className="text-emerald-600 text-sm font-medium">{formatMXN(sale.amount_mxn)}</div>
                     </div>
                   </div>
-
-                  {/* Payment status badge */}
-                  {sale.payment_status === 'refunded' && (
-                    <span className="badge bg-danger mt-1">Reembolsado</span>
-                  )}
-                  {sale.payment_status === 'confirmed' && (
-                    <span className="badge bg-success mt-1">Confirmado</span>
-                  )}
-
-                  {/* Time */}
-                  <div className="text-muted mt-1" style={{ fontSize: '0.7rem' }}>
-                    {new Date(sale.created_at).toLocaleTimeString('es-MX', {
-                      hour: '2-digit', minute: '2-digit'
-                    })}
+                  {sale.payment_status === 'refunded' && <Badge variant="destructive" className="mt-1">Reembolsado</Badge>}
+                  {sale.payment_status === 'confirmed' && <Badge className="bg-emerald-600 hover:bg-emerald-600 mt-1">Confirmado</Badge>}
+                  <div className="text-muted-foreground mt-1 text-[0.7rem]">
+                    {new Date(sale.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>

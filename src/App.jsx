@@ -1,11 +1,4 @@
 // src/App.jsx
-// Root component with React Router (hash router for GitHub Pages static hosting).
-//
-// Route structure:
-//   /                    → role-based: login | org dashboard | vendedor | participante redirect
-//   /org/:orgSlug        → public org sorteo listing (no auth required)
-//   /sorteo/:orgSlug/:id → public sorteo detail + buy (no auth required)
-//   /mis-boletos         → participante "My Boletos" (shows login if not authed)
 
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -18,12 +11,13 @@ import { AdminDashboard }        from './pages/AdminDashboard'
 import { PublicOrgPage }         from './pages/PublicOrgPage'
 import { PublicSorteoPage }      from './pages/PublicSorteoPage'
 import { LoadingSpinner }        from './components/shared/UI'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 function HomeRoute() {
   const { session, role, loading } = useAuth()
 
   if (loading) return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center">
+    <div className="min-h-screen flex items-center justify-center">
       <LoadingSpinner message="Iniciando Rafiki..." />
     </div>
   )
@@ -37,11 +31,13 @@ function HomeRoute() {
     case 'participante': return <Navigate to="/mis-boletos" replace />
     default:
       return (
-        <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
-          <div className="alert alert-warning text-center">
-            Tu cuenta no tiene un rol asignado.<br />
-            <span className="small text-muted">Contacta al administrador de Rafiki.</span>
-          </div>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Alert className="max-w-md bg-amber-50 border-amber-200 text-center">
+            <AlertDescription className="text-amber-800">
+              Tu cuenta no tiene un rol asignado.<br />
+              <span className="text-sm text-muted-foreground">Contacta al administrador de Rafiki.</span>
+            </AlertDescription>
+          </Alert>
         </div>
       )
   }

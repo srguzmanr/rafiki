@@ -4,6 +4,12 @@
 
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, AlertCircle } from 'lucide-react'
 
 export function Login() {
   const { signIn } = useAuth()
@@ -24,34 +30,36 @@ export function Login() {
       setError('Correo o contraseña incorrectos. Intenta de nuevo.')
       setLoading(false)
     }
-    // On success, AuthContext updates and App.jsx re-renders to the correct dashboard
   }
 
   return (
-    <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center p-3">
-      <div style={{ width: '100%', maxWidth: 400 }}>
+    <div className="min-h-screen bg-background flex items-center justify-center p-3">
+      <div className="w-full max-w-[400px]">
 
-       {/* Logo / wordmark */}
-        <div className="text-center mb-4">
-          <img src="/RafikiLogos03.png" alt="Rafiki" style={{ height: 60 }} className="mb-2" />
-          <p className="text-muted">Tu Central de Rifas</p>
+        {/* Logo / wordmark */}
+        <div className="text-center mb-6">
+          <img src="/RafikiLogos03.png" alt="Rafiki" className="h-[60px] mx-auto mb-2" />
+          <p className="text-muted-foreground">Tu Central de Rifas</p>
         </div>
 
-        <div className="card shadow-sm">
-          <div className="card-body p-4">
-            <h5 className="card-title mb-4">Iniciar sesión</h5>
-
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Iniciar sesión</CardTitle>
+          </CardHeader>
+          <CardContent>
             {error && (
-              <div className="alert alert-danger py-2 small">{error}</div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="mb-3">
-                <label className="form-label" htmlFor="email">Correo electrónico</label>
-                <input
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo electrónico</Label>
+                <Input
                   id="email"
                   type="email"
-                  className="form-control"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="tu@correo.com"
@@ -61,12 +69,11 @@ export function Login() {
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="form-label" htmlFor="password">Contraseña</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
                   id="password"
                   type="password"
-                  className="form-control"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -75,21 +82,21 @@ export function Login() {
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary w-100"
+                className="w-full"
                 disabled={loading || !email || !password}
               >
                 {loading
-                  ? <><span className="spinner-border spinner-border-sm me-2" />Entrando...</>
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</>
                   : 'Entrar'
                 }
-              </button>
+              </Button>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <p className="text-center text-muted small mt-3">
+        <p className="text-center text-muted-foreground text-sm mt-3">
           ¿Problemas para acceder? Contacta a tu administrador.
         </p>
       </div>
