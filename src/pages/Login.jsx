@@ -49,7 +49,7 @@ export function Login() {
 
         {/* Logo / wordmark */}
         <div className="text-center mb-6">
-          <img src="/RafikiLogos03.png" alt="Rafiki" className="h-[60px] mx-auto mb-2" />
+          <img src="/RafikiLogos03.png" alt="Rafiki" className="h-12 mx-auto mb-2" />
           <p className="text-muted-foreground">Tu Central de Rifas</p>
         </div>
 
