@@ -33,7 +33,7 @@ export function SorteoCard({ sorteo, coverImageUrl }) {
           <img src={coverImageUrl} alt={sorteo.title} className="w-full h-36 object-cover" />
         ) : (
           <div className="bg-[#1F4E29] h-36 flex items-center justify-center">
-            <img src="/RafikiIcon01.png" alt="Rafiki" className="h-24 opacity-40"
+            <img src="/RafikiIcon01.png" alt="Rafiki" className="h-16 opacity-40"
               style={{ filter: 'brightness(0) invert(1)' }} />
           </div>
         )}

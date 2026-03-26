@@ -30,7 +30,7 @@ export function SorteoPreview({ sorteo }) {
         </div>
       ) : (
         <div className="bg-[#1F4E29] h-32 rounded-lg flex items-center justify-center">
-          <img src="/RafikiIcon01.png" alt="" className="h-16 opacity-30" style={{ filter: 'brightness(0) invert(1)' }} />
+          <img src="/RafikiIcon01.png" alt="" className="h-12 opacity-30" style={{ filter: 'brightness(0) invert(1)' }} />
         </div>
       )}
 
