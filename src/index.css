@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Rafiki palette mapped to shadcn CSS variables (HSL) */
+    /* Primary: #49A446 → hsl(119, 40%, 46%) */
+    --background: 0 0% 98.4%;       /* #FBFBFB Cream */
+    --foreground: 150 43% 21%;      /* #1F4E29 Forest (dark text) */
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 43% 21%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 43% 21%;
+
+    --primary: 119 40% 46%;          /* #49A446 Green */
+    --primary-foreground: 0 0% 100%; /* white */
+
+    --secondary: 156 36% 48%;        /* #4EA67E Jungle */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 150 10% 40%;
+
+    --accent: 10 87% 63%;            /* #F2644E Salmon */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 10 87% 63%;       /* Salmon for destructive too */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 119 40% 46%;              /* Green ring */
+
+    --radius: 0.5rem;
+
+    /* Extra brand tokens */
+    --rafiki-highlight: 47 97% 58%;   /* #FCD12A Tuscany */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+  }
+}
