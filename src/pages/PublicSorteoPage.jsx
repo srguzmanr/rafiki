@@ -5,11 +5,76 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { fetchPublicSorteo } from '../lib/participanteApi'
 import { PurchaseFlow } from '../components/participante/PurchaseFlow'
+import { WhatsAppButton } from '../components/WhatsAppButton'
 import { LoadingSpinner, ErrorMessage, StatusBadge, SalesProgressBar, formatMXN } from '../components/shared/UI'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Share2, Link2, Check, Trophy } from 'lucide-react'
+
+function getCountdownLabel(endDate, status) {
+  if (status === 'drawn') return 'Sorteado'
+  if (status === 'closed') return 'Sorteo cerrado'
+  if (!endDate) return null
+  const end = new Date(endDate)
+  const now = new Date()
+  const diffMs = end - now
+  if (diffMs < 0) return 'Plazo terminado'
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  if (diffHours < 24) return `Termina en ${diffHours} hora${diffHours !== 1 ? 's' : ''}`
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  return `Termina en ${diffDays} día${diffDays !== 1 ? 's' : ''}`
+}
+
+function ShareButtons({ sorteo }) {
+  const [copied, setCopied] = useState(false)
+  const url = window.location.href
+  const text = `${sorteo.title} — ${Number(sorteo.price_per_boleto) === 0 ? 'Participa gratis' : formatMXN(sorteo.price_per_boleto) + ' por boleto'} en Rafiki`
+
+  function copyLink() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-muted-foreground text-sm mr-1"><Share2 className="h-4 w-4 inline" /> Compartir:</span>
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#25D366] text-white text-sm font-medium hover:bg-[#25D366]/90 transition-colors"
+      >
+        WhatsApp
+      </a>
+      <button
+        onClick={copyLink}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm hover:bg-muted transition-colors"
+      >
+        {copied ? <><Check className="h-3.5 w-3.5" /> ¡Copiado!</> : <><Link2 className="h-3.5 w-3.5" /> Copiar enlace</>}
+      </button>
+      <a
+        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm hover:bg-muted transition-colors"
+      >
+        Facebook
+      </a>
+      <a
+        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm hover:bg-muted transition-colors"
+      >
+        X
+      </a>
+    </div>
+  )
+}
 
 export function PublicSorteoPage() {
   const { orgSlug, sorteoId } = useParams()
@@ -44,6 +109,8 @@ export function PublicSorteoPage() {
   const prizes = Array.isArray(sorteo.prizes) ? sorteo.prizes : []
   const canBuy = sorteo.status === 'active'
   const isGiveaway = Number(sorteo.price_per_boleto) === 0
+  const sold = Number(sorteo.boletos_sold || 0)
+  const countdownLabel = getCountdownLabel(sorteo.end_date, sorteo.status)
 
   if (buying) return (
     <div className="min-h-screen bg-background">
@@ -62,7 +129,7 @@ export function PublicSorteoPage() {
     <div className="min-h-screen bg-background">
       <nav className="bg-white border-b px-3 py-2 flex items-center">
         <Link to={`/org/${orgSlug}`} className="text-primary text-sm no-underline hover:underline">
-          ← {sorteo.org_name}
+          &larr; {sorteo.org_name}
         </Link>
         <img src="/RafikiLogos03.png" alt="Rafiki" className="h-7 mx-auto" />
         <div className="w-20" />
@@ -78,10 +145,25 @@ export function PublicSorteoPage() {
           <StatusBadge status={sorteo.status} />
         </div>
 
+        {/* Organization info */}
         <p className="text-muted-foreground text-sm mb-1">{sorteo.org_name}</p>
         {sorteo.permit_number && (
           <p className="text-muted-foreground text-sm mb-3">Permiso: <strong>{sorteo.permit_number}</strong></p>
         )}
+
+        {/* Countdown */}
+        {countdownLabel && (
+          <div className="mb-3">
+            <Badge variant="outline" className="text-sm">
+              {countdownLabel}
+            </Badge>
+          </div>
+        )}
+
+        {/* Share buttons */}
+        <div className="mb-4">
+          <ShareButtons sorteo={sorteo} />
+        </div>
 
         {sorteo.cause && (
           <Alert className="bg-emerald-50 border-emerald-200 mb-4">
@@ -114,6 +196,16 @@ export function PublicSorteoPage() {
             <SalesProgressBar pctSold={sorteo.pct_sold} boletosSold={sorteo.boletos_sold || 0} totalBoletos={sorteo.total_boletos} />
           </CardContent>
         </Card>
+
+        {/* Social proof */}
+        {sold > 0 && (
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            {sold === 1
+              ? '1 persona ya está participando'
+              : `${sold.toLocaleString('es-MX')} personas ya están participando`
+            }
+          </p>
+        )}
 
         {/* Key dates */}
         {(sorteo.drawing_date || sorteo.end_date) && (
@@ -170,10 +262,12 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* Winners */}
+        {/* Winners (drawn sorteos) */}
         {sorteo.status === 'drawn' && sorteo.drawing_result && (
           <div className="mb-4">
-            <h5 className="font-bold mb-3">🎉 Ganadores</h5>
+            <h5 className="font-bold mb-3 flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" /> Ganadores
+            </h5>
             <div className="flex flex-col gap-3">
               {(sorteo.drawing_result.winners || []).map((w, i) => (
                 <Card key={w.prize_id || i} className="border-emerald-200">
@@ -187,7 +281,7 @@ export function PublicSorteoPage() {
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-emerald-600 text-2xl">#{w.boleto_numero}</div>
-                      <div className="font-medium">{w.participant_name}</div>
+                      {w.participant_name && <div className="font-medium">{w.participant_name}</div>}
                     </div>
                   </CardContent>
                 </Card>
@@ -201,7 +295,7 @@ export function PublicSorteoPage() {
       </div>
 
       {/* Sticky CTA */}
-      <div className="sticky bottom-0 z-50 bg-white border-t px-3 py-3">
+      <div className="sticky bottom-0 z-40 bg-white border-t px-3 py-3">
         <div className="max-w-[640px] mx-auto">
           {canBuy ? (
             <Button
@@ -219,6 +313,8 @@ export function PublicSorteoPage() {
           )}
         </div>
       </div>
+
+      <WhatsAppButton />
     </div>
   )
 }

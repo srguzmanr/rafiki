@@ -37,6 +37,11 @@ export function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-3">
       <div className="w-full max-w-[400px]">
 
+        {/* Back to home */}
+        <div className="mb-4">
+          <Link to="/" className="text-sm text-primary hover:underline">&larr; Volver al inicio</Link>
+        </div>
+
         {/* Logo / wordmark */}
         <div className="text-center mb-6">
           <img src="/RafikiLogos03.png" alt="Rafiki" className="h-[60px] mx-auto mb-2" />
