@@ -1,17 +1,180 @@
 // src/components/organizador/SorteoDetail.jsx
+// Organizador's sorteo detail view with management tools.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import QRCode from 'qrcode'
 import {
   fetchSorteoById, fetchVendedorSummary, fetchOrgVendedores,
-  assignVendedor, removeVendedor, drawWinners,
+  assignVendedor, removeVendedor, drawWinners, fetchReportSales,
 } from '../../lib/sorteosApi'
 import { StatusBadge, LoadingSpinner, ErrorMessage, SalesProgressBar, formatMXN, ConfirmModal } from '../shared/UI'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Loader2, ArrowLeft, Pencil, BarChart3, Dice5 } from 'lucide-react'
+import {
+  Loader2, ArrowLeft, Pencil, BarChart3, Dice5,
+  Link2, Check, Share2, Download, Search,
+} from 'lucide-react'
+
+function ShareTools({ sorteo }) {
+  const [copied, setCopied] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState(null)
+  const sorteoUrl = `${window.location.origin}${window.location.pathname}#/sorteo/${sorteo.org_slug || 'org'}/${sorteo.id}`
+  const text = `${sorteo.title} — Participa en Rafiki`
+
+  useEffect(() => {
+    QRCode.toDataURL(sorteoUrl, { width: 300, margin: 2 }).then(setQrDataUrl).catch(() => {})
+  }, [sorteoUrl])
+
+  function copyLink() {
+    navigator.clipboard.writeText(sorteoUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function downloadQR() {
+    if (!qrDataUrl) return
+    const a = document.createElement('a')
+    a.href = qrDataUrl
+    a.download = `sorteo-${sorteo.id.slice(0, 8)}-qr.png`
+    a.click()
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2"><Share2 className="h-4 w-4" /> Compartir</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={copyLink}>
+            {copied ? <><Check className="mr-1 h-3.5 w-3.5" /> ¡Copiado!</> : <><Link2 className="mr-1 h-3.5 w-3.5" /> Copiar enlace</>}
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`https://wa.me/?text=${encodeURIComponent(text + '\n' + sorteoUrl)}`} target="_blank" rel="noopener noreferrer"
+              className="bg-[#25D366] text-white border-[#25D366] hover:bg-[#25D366]/90 hover:text-white">
+              WhatsApp
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(sorteoUrl)}`} target="_blank" rel="noopener noreferrer">
+              Facebook
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(sorteoUrl)}`} target="_blank" rel="noopener noreferrer">
+              X
+            </a>
+          </Button>
+        </div>
+        {qrDataUrl && (
+          <div className="flex items-center gap-4">
+            <img src={qrDataUrl} alt="QR Code" className="w-28 h-28 border rounded" />
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Código QR del sorteo</p>
+              <Button variant="outline" size="sm" onClick={downloadQR}>
+                <Download className="mr-1 h-3.5 w-3.5" /> Descargar QR
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ParticipantList({ sorteoId, isGiveaway }) {
+  const [sales, setSales] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    fetchReportSales(sorteoId).then(({ data }) => {
+      setSales(data || [])
+      setLoading(false)
+    })
+  }, [sorteoId])
+
+  const filtered = sales.filter(s => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (s.buyer_name || '').toLowerCase().includes(q) || (s.buyer_email || '').toLowerCase().includes(q)
+  })
+
+  // Aggregate by buyer
+  const buyerMap = new Map()
+  for (const sale of filtered) {
+    const key = sale.buyer_name || sale.buyer_phone || 'Anónimo'
+    const existing = buyerMap.get(key)
+    if (existing) {
+      existing.count++
+      if (new Date(sale.created_at) > new Date(existing.date)) existing.date = sale.created_at
+    } else {
+      buyerMap.set(key, {
+        name: sale.buyer_name || 'Sin nombre',
+        email: sale.buyer_email || '',
+        phone: sale.buyer_phone || '',
+        count: 1,
+        date: sale.created_at,
+      })
+    }
+  }
+  const buyers = Array.from(buyerMap.values())
+
+  if (loading) return <p className="text-sm text-muted-foreground">Cargando participantes...</p>
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-base">{isGiveaway ? 'Participantes' : 'Compradores'} ({buyers.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nombre o correo..." value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-9" />
+        </div>
+        {buyers.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {searchQuery ? 'Sin resultados.' : (isGiveaway ? 'Aún no hay participantes.' : 'Aún no hay compradores.')}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead className="text-right">Boletos</TableHead>
+                  <TableHead className="text-right">Fecha</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {buyers.map((b, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{b.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {b.email && <div>{b.email}</div>}
+                      {b.phone && <div>{b.phone}</div>}
+                    </TableCell>
+                    <TableCell className="text-right">{b.count}</TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {new Date(b.date).toLocaleDateString('es-MX')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenReporting }) {
   const [sorteo, setSorteo] = useState(null)
@@ -56,7 +219,7 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
     setConfirm({
       title: 'Realizar Sorteo',
       message: `¿Estás seguro? Esta acción no se puede deshacer.\n\nSe seleccionarán ganador(es) de ${Number(sorteo.boletos_sold || 0).toLocaleString('es-MX')} boletos vendidos.`,
-      confirmLabel: '🎲 Realizar Sorteo',
+      confirmLabel: 'Realizar Sorteo',
       onConfirm: async () => {
         setDrawing(true); setDrawError(null)
         const { data, error } = await drawWinners(sorteoId)
@@ -86,6 +249,7 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
 
   const assignedIds = new Set(vendedores.map(v => v.vendedor_id))
   const unassigned  = allVendedores.filter(v => !assignedIds.has(v.user_id))
+  const isGiveaway = Number(sorteo.price_per_boleto) === 0
 
   return (
     <>
@@ -102,7 +266,7 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
           {sorteo.cause && <p className="text-muted-foreground text-sm mt-1"><em>{sorteo.cause}</em></p>}
         </div>
         <div className="flex gap-2 shrink-0">
-          {sorteo.status === 'draft' && (
+          {(sorteo.status === 'draft' || sorteo.status === 'active') && (
             <Button variant="outline" size="sm" onClick={() => onEdit(sorteoId)}>
               <Pencil className="mr-1 h-4 w-4" /> Editar
             </Button>
@@ -126,7 +290,7 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
       {sorteo.status === 'drawn' && sorteo.drawing_result && (
         <Card className="border-emerald-300 mb-4">
           <CardHeader className="bg-emerald-600 text-white rounded-t-lg py-3">
-            <CardTitle className="text-base">🎉 Resultado del Sorteo</CardTitle>
+            <CardTitle className="text-base">Resultado del Sorteo</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
             {(sorteo.drawing_result.winners || []).map((w, i) => (
@@ -157,9 +321,9 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
           { label: 'Total boletos', value: Number(sorteo.total_boletos).toLocaleString('es-MX') },
-          { label: 'Vendidos', value: Number(sorteo.boletos_sold || 0).toLocaleString('es-MX') },
+          { label: isGiveaway ? 'Participantes' : 'Vendidos', value: Number(sorteo.boletos_sold || 0).toLocaleString('es-MX') },
           { label: 'Disponibles', value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX') },
-          { label: 'Recaudado', value: formatMXN(sorteo.revenue_mxn || 0), highlight: true },
+          { label: isGiveaway ? 'Giveaway gratuito' : 'Recaudado', value: isGiveaway ? 'GRATIS' : formatMXN(sorteo.revenue_mxn || 0), highlight: !isGiveaway },
         ].map(stat => (
           <Card key={stat.label} className="text-center">
             <CardContent className="py-3">
@@ -177,12 +341,17 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
         </CardContent>
       </Card>
 
+      {/* Share Tools */}
+      <div className="mb-4">
+        <ShareTools sorteo={sorteo} />
+      </div>
+
       {/* Info row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Detalles</CardTitle></CardHeader>
           <CardContent className="text-sm space-y-2">
-            <div className="flex justify-between"><span className="text-muted-foreground">Precio por boleto</span><span className="font-medium">{formatMXN(sorteo.price_per_boleto)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Precio por boleto</span><span className="font-medium">{isGiveaway ? 'Gratis' : formatMXN(sorteo.price_per_boleto)}</span></div>
             {sorteo.permit_number && <div className="flex justify-between"><span className="text-muted-foreground">Permiso</span><span className="font-medium">{sorteo.permit_number}</span></div>}
             {sorteo.start_date && <div className="flex justify-between"><span className="text-muted-foreground">Inicio ventas</span><span>{new Date(sorteo.start_date).toLocaleDateString('es-MX')}</span></div>}
             {sorteo.end_date && <div className="flex justify-between"><span className="text-muted-foreground">Cierre ventas</span><span>{new Date(sorteo.end_date).toLocaleDateString('es-MX')}</span></div>}
@@ -208,6 +377,13 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
           </CardContent>
         </Card>
       </div>
+
+      {/* Participant List */}
+      {Number(sorteo.boletos_sold || 0) > 0 && (
+        <div className="mb-4">
+          <ParticipantList sorteoId={sorteoId} isGiveaway={isGiveaway} />
+        </div>
+      )}
 
       {/* Vendedores */}
       <Card className="mb-4">

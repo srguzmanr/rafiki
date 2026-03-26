@@ -17,7 +17,7 @@ function formatEndDate(endDate) {
   return `Termina: ${end.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
 
-export function SorteoCard({ sorteo }) {
+export function SorteoCard({ sorteo, coverImageUrl }) {
   const isGiveaway = Number(sorteo.price_per_boleto) === 0
   const pct = sorteo.pct_sold || 0
   const sold = Number(sorteo.boletos_sold || 0)
@@ -28,15 +28,15 @@ export function SorteoCard({ sorteo }) {
   return (
     <Link to={`/sorteo/${sorteo.org_slug}/${sorteo.id}`} className="no-underline">
       <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
-        {/* Placeholder image */}
-        <div className="bg-[#1F4E29] h-36 flex items-center justify-center">
-          <img
-            src="/RafikiIcon01.png"
-            alt="Rafiki"
-            className="h-24 opacity-40"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
-        </div>
+        {/* Cover image or placeholder */}
+        {coverImageUrl ? (
+          <img src={coverImageUrl} alt={sorteo.title} className="w-full h-36 object-cover" />
+        ) : (
+          <div className="bg-[#1F4E29] h-36 flex items-center justify-center">
+            <img src="/RafikiIcon01.png" alt="Rafiki" className="h-24 opacity-40"
+              style={{ filter: 'brightness(0) invert(1)' }} />
+          </div>
+        )}
 
         <CardContent className="p-4">
           {/* Giveaway badge */}

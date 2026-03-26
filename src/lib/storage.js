@@ -51,6 +51,14 @@ export async function fetchSorteoImages(sorteoId) {
   return { data: data || [], error }
 }
 
+export async function fetchAllSorteoImages() {
+  const { data, error } = await supabase
+    .from('sorteo_images')
+    .select('sorteo_id, storage_path, display_order')
+    .order('display_order', { ascending: true })
+  return { data: data || [], error }
+}
+
 export async function saveSorteoImages(sorteoId, orgId, images) {
   // Delete existing images for this sorteo
   await supabase.from('sorteo_images').delete().eq('sorteo_id', sorteoId)
