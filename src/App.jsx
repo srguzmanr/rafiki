@@ -10,6 +10,8 @@ import { ParticipanteDashboard } from './pages/ParticipanteDashboard'
 import { AdminDashboard }        from './pages/AdminDashboard'
 import { PublicOrgPage }         from './pages/PublicOrgPage'
 import { PublicSorteoPage }      from './pages/PublicSorteoPage'
+import { PrivacyPage }           from './pages/PrivacyPage'
+import { TermsPage }             from './pages/TermsPage'
 import { LoadingSpinner }        from './components/shared/UI'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="/mis-boletos"               element={<ParticipanteDashboard />} />
           <Route path="/org/:orgSlug"              element={<PublicOrgPage />} />
           <Route path="/sorteo/:orgSlug/:sorteoId" element={<PublicSorteoPage />} />
+          <Route path="/privacidad"                element={<PrivacyPage />} />
+          <Route path="/terminos"                  element={<TermsPage />} />
           <Route path="*"                          element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
