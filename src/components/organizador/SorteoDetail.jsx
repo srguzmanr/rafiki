@@ -15,6 +15,7 @@ import {
   fetchOrgVendedores,
   assignVendedor,
   removeVendedor,
+  drawWinners,
 } from '../../lib/sorteosApi'
 import { StatusBadge, LoadingSpinner, ErrorMessage, SalesProgressBar, formatMXN, ConfirmModal } from '../shared/UI'
 
@@ -27,6 +28,8 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
   const [confirm, setConfirm]           = useState(null)
   const [assigning, setAssigning]       = useState(false)
   const [selectedVendedor, setSelectedVendedor] = useState('')
+  const [drawing, setDrawing]           = useState(false)
+  const [drawError, setDrawError]       = useState(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -63,6 +66,27 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
     } finally {
       setAssigning(false)
     }
+  }
+
+  // ── Draw winners ──
+  function handleDraw() {
+    setConfirm({
+      title: 'Realizar Sorteo',
+      message: `¿Estás seguro? Esta acción no se puede deshacer.\n\nSe seleccionarán ganador(es) de ${Number(sorteo.boletos_sold || 0).toLocaleString('es-MX')} boletos vendidos.`,
+      confirmLabel: '🎲 Realizar Sorteo',
+      danger: false,
+      onConfirm: async () => {
+        setDrawing(true)
+        setDrawError(null)
+        const { data, error } = await drawWinners(sorteoId)
+        setDrawing(false)
+        if (error) {
+          setDrawError(error.message)
+          throw error
+        }
+        await loadData()
+      },
+    })
   }
 
   function handleRemove(vendedorId, vendedorName) {
@@ -115,8 +139,61 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
               📊 Reporte
             </button>
           )}
+          {sorteo.status === 'closed' && Number(sorteo.boletos_sold || 0) > 0 && (
+            <button
+              className="btn btn-warning btn-sm fw-bold"
+              onClick={handleDraw}
+              disabled={drawing}
+            >
+              {drawing
+                ? <><span className="spinner-border spinner-border-sm me-1" />Sorteando...</>
+                : '🎲 Realizar Sorteo'
+              }
+            </button>
+          )}
         </div>
       </div>
+
+      {/* ── Draw error ── */}
+      {drawError && (
+        <div className="alert alert-danger mb-4">{drawError}</div>
+      )}
+
+      {/* ── Drawing Result (shown when status = drawn) ── */}
+      {sorteo.status === 'drawn' && sorteo.drawing_result && (
+        <div className="card border-success mb-4">
+          <div className="card-header bg-success text-white">
+            <h6 className="mb-0">🎉 Resultado del Sorteo</h6>
+          </div>
+          <div className="card-body">
+            <div className="d-flex flex-column gap-3">
+              {(sorteo.drawing_result.winners || []).map((w, i) => (
+                <div key={w.prize_id || i} className="d-flex align-items-center gap-3 p-3 bg-light rounded-3">
+                  <div
+                    className="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                    style={{ width: 48, height: 48, fontSize: '1.2rem' }}
+                  >
+                    {w.prize_position}°
+                  </div>
+                  <div className="flex-grow-1">
+                    <div className="fw-bold">{w.prize_name}</div>
+                    <div className="text-muted small">Premio {w.prize_position}° lugar</div>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold text-success fs-5">#{w.boleto_numero}</div>
+                    <div className="text-muted small">{w.participant_name}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-top d-flex justify-content-between text-muted small">
+              <span>Método: {sorteo.drawing_result.method === 'postgresql_random' ? 'Aleatorio (PostgreSQL)' : sorteo.drawing_result.method}</span>
+              <span>Pool: {sorteo.drawing_result.eligible_pool_size} boletos elegibles</span>
+              <span>{new Date(sorteo.drawing_result.drawn_at).toLocaleString('es-MX', { timeZone: 'America/Hermosillo' })}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Summary stats ── */}
       <div className="row g-3 mb-4">
