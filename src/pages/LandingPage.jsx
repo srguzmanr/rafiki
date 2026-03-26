@@ -64,7 +64,7 @@ export function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white border-b px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link to="/">
-            <img src="/RafikiLogos03.png" alt="Rafiki" className="h-7" />
+            <img src="/RafikiLogos03.png" alt="Rafiki" className="h-10" />
           </Link>
           <Button variant="outline" size="sm" asChild>
             <Link to="/login">Iniciar sesión</Link>
@@ -75,7 +75,7 @@ export function LandingPage() {
       {/* Hero */}
       <section className="bg-[#1F4E29] text-white py-16 md:py-24 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <img src="/RafikiLogos03.png" alt="Rafiki" className="h-16 md:h-20 mx-auto mb-6 brightness-0 invert" />
+          <img src="/RafikiLogos03.png" alt="Rafiki" className="h-28 md:h-36 mx-auto mb-6" style={{ filter: 'brightness(0) invert(1)' }} />
           <h1 className="text-3xl md:text-5xl font-bold mb-3">Tu Central de Rifas</h1>
           <p className="text-lg md:text-xl text-white/80 mb-8">
             Organiza, participa y gana en sorteos entre amigos.
@@ -268,7 +268,7 @@ export function LandingPage() {
       <footer className="bg-[#1F4E29] border-t border-white/10 text-white/70 py-10 px-4">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <img src="/RafikiLogos03.png" alt="Rafiki" className="h-7 mb-2 brightness-0 invert" />
+            <img src="/RafikiLogos03.png" alt="Rafiki" className="h-10 mb-2" style={{ filter: 'brightness(0) invert(1)' }} />
             <p className="text-sm">Tu Central de Rifas</p>
           </div>
           <div className="text-sm space-y-2">
