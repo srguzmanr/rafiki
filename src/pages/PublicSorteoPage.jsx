@@ -231,13 +231,37 @@ export function PublicSorteoPage() {
           </div>
         )}
 
-        {/* ── Winner (if drawn) ── */}
+        {/* ── Winners (if drawn) ── */}
         {sorteo.status === 'drawn' && sorteo.drawing_result && (
-          <div className="alert alert-primary mb-4">
-            <h6 className="fw-bold">🎉 Resultado</h6>
-            <pre className="mb-0 small" style={{ whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(sorteo.drawing_result, null, 2)}
-            </pre>
+          <div className="mb-4">
+            <h5 className="fw-bold mb-3">🎉 Ganadores</h5>
+            <div className="d-flex flex-column gap-3">
+              {(sorteo.drawing_result.winners || []).map((w, i) => (
+                <div key={w.prize_id || i} className="card border-success">
+                  <div className="card-body d-flex align-items-center gap-3">
+                    <div
+                      className="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                      style={{ width: 48, height: 48, fontSize: '1.2rem' }}
+                    >
+                      {w.prize_position}°
+                    </div>
+                    <div className="flex-grow-1">
+                      <div className="fw-bold">{w.prize_name}</div>
+                      <div className="text-muted small">Boleto ganador</div>
+                    </div>
+                    <div className="text-end">
+                      <div className="fw-bold text-success fs-4">#{w.boleto_numero}</div>
+                      <div className="fw-medium">{w.participant_name}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-muted small mt-2 text-center">
+              Sorteo realizado el {new Date(sorteo.drawing_result.drawn_at).toLocaleDateString('es-MX', {
+                day: 'numeric', month: 'long', year: 'numeric'
+              })}
+            </div>
           </div>
         )}
 
