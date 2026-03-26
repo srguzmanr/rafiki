@@ -1,12 +1,18 @@
+import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
 
-  // GitHub Pages deploys to /rafiki/ subdirectory
-  // Set this to '/' if using a custom domain
+  // Custom domain rafiki.mx — base must be '/'
   base: '/',
+
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 
   build: {
     outDir: 'dist',
