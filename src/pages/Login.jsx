@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export function Login() {
   const { signIn } = useAuth()
@@ -98,6 +99,11 @@ export function Login() {
 
         <p className="text-center text-muted-foreground text-sm mt-3">
           ¿Problemas para acceder? Contacta a tu administrador.
+        </p>
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          <Link to="/privacidad" className="underline hover:text-foreground">Aviso de Privacidad</Link>
+          {' | '}
+          <Link to="/terminos" className="underline hover:text-foreground">Términos y Condiciones</Link>
         </p>
       </div>
     </div>
