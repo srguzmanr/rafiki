@@ -1,113 +1,69 @@
 // src/components/vendedor/SorteoSelector.jsx
-//
-// The vendedor's home screen: their assigned active sorteos.
-// One tap → opens QuickSell for that sorteo.
-// Designed for glanceability on a phone screen.
-//
-// Props:
-//   sorteos      — array of assigned active sorteos
-//   todayStats   — { count, amount_mxn } for the header
-//   onSelectSorteo(sorteo) — enter QuickSell mode
 
 import { formatMXN, SalesProgressBar } from '../shared/UI'
 
 export function SorteoSelector({ sorteos, todayStats, onSelectSorteo }) {
   const allGiveaways = sorteos.length > 0 && sorteos.every(s => Number(s.price_per_boleto) === 0)
-  return (
-    <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
+  return (
+    <div className="max-w-[480px] mx-auto">
       {/* Today's stats banner */}
-      <div className="bg-primary text-white rounded-3 p-3 mb-4">
-        <div className="row text-center g-0">
-          <div className={allGiveaways ? "col-12 text-center" : "col-6 border-end border-white border-opacity-25"}>
-            <div className="fs-2 fw-bold">{todayStats.count}</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-              {allGiveaways ? 'registros hoy' : 'ventas hoy'}
-            </div>
+      <div className="bg-primary text-white rounded-xl p-4 mb-4">
+        <div className={`flex ${allGiveaways ? 'justify-center' : ''} text-center gap-4`}>
+          <div className={allGiveaways ? '' : 'flex-1'}>
+            <div className="text-4xl font-bold">{todayStats.count}</div>
+            <div className="text-sm opacity-85">{allGiveaways ? 'registros hoy' : 'ventas hoy'}</div>
           </div>
           {!allGiveaways && (
-            <div className="col-6">
-              <div className="fs-2 fw-bold">{formatMXN(todayStats.amount_mxn)}</div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>recaudado hoy</div>
+            <div className="flex-1 border-l border-white/25 pl-4">
+              <div className="text-4xl font-bold">{formatMXN(todayStats.amount_mxn)}</div>
+              <div className="text-sm opacity-85">recaudado hoy</div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Section header */}
-      <h6 className="text-muted text-uppercase mb-3" style={{ letterSpacing: 1, fontSize: '0.75rem' }}>
+      <h6 className="text-muted-foreground uppercase mb-3 tracking-wider text-xs font-medium">
         Mis sorteos activos
       </h6>
 
-      {/* No sorteos state */}
       {sorteos.length === 0 && (
-        <div className="text-center py-5">
-          <div style={{ fontSize: '3rem' }}>🎟️</div>
-          <p className="text-muted mt-2">
-            No tienes sorteos activos asignados.
-          </p>
-          <p className="text-muted small">
-            Pide a tu coordinador que te asigne a un sorteo.
-          </p>
+        <div className="text-center py-12">
+          <div className="text-5xl">🎟️</div>
+          <p className="text-muted-foreground mt-2">No tienes sorteos activos asignados.</p>
+          <p className="text-muted-foreground text-sm">Pide a tu coordinador que te asigne a un sorteo.</p>
         </div>
       )}
 
-      {/* Sorteo cards — tap to sell */}
-      <div className="d-flex flex-column gap-3">
+      <div className="flex flex-col gap-3">
         {sorteos.map(sorteo => (
           <button
             key={sorteo.id}
-            className="card border-0 shadow-sm text-start w-100 p-0"
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              cursor: 'pointer',
-              transition: 'transform 0.1s, box-shadow 0.1s',
-              minHeight: 100,
-            }}
+            className="w-full text-left bg-card border rounded-xl p-3 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
             onClick={() => onSelectSorteo(sorteo)}
-            onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
-            onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <div className="card-body px-3 py-3">
-              <div className="d-flex justify-content-between align-items-start mb-1">
-                <div>
-                  <div className="fw-bold" style={{ fontSize: '1rem' }}>{sorteo.title}</div>
-                  {sorteo.cause && (
-                    <div className="text-muted small"><em>{sorteo.cause}</em></div>
-                  )}
-                </div>
-                <div className="text-end ms-2 flex-shrink-0">
-                  {Number(sorteo.price_per_boleto) === 0 ? (
-                    <div className="fw-bold text-success" style={{ fontSize: '1.1rem' }}>GRATIS</div>
-                  ) : (
-                    <>
-                      <div className="fw-bold text-primary" style={{ fontSize: '1.1rem' }}>
-                        {formatMXN(sorteo.price_per_boleto)}
-                      </div>
-                      <div className="text-muted" style={{ fontSize: '0.7rem' }}>por boleto</div>
-                    </>
-                  )}
-                </div>
+            <div className="flex justify-between items-start mb-1">
+              <div>
+                <div className="font-bold">{sorteo.title}</div>
+                {sorteo.cause && <div className="text-muted-foreground text-sm"><em>{sorteo.cause}</em></div>}
               </div>
-
-              <div className="mt-2">
-                <SalesProgressBar
-                  pctSold={sorteo.pct_sold}
-                  boletosSold={sorteo.boletos_sold}
-                  totalBoletos={sorteo.total_boletos}
-                />
+              <div className="text-right ml-2 shrink-0">
+                {Number(sorteo.price_per_boleto) === 0 ? (
+                  <div className="font-bold text-emerald-600 text-lg">GRATIS</div>
+                ) : (
+                  <>
+                    <div className="font-bold text-primary text-lg">{formatMXN(sorteo.price_per_boleto)}</div>
+                    <div className="text-muted-foreground text-[0.7rem]">por boleto</div>
+                  </>
+                )}
               </div>
-
-              {/* CTA hint */}
-              <div className="d-flex justify-content-between align-items-center mt-2">
-                <span className="text-muted small">
-                  {Number(sorteo.boletos_available).toLocaleString('es-MX')} disponibles
-                </span>
-                <span className="text-primary small fw-medium">
-                  {Number(sorteo.price_per_boleto) === 0 ? 'Registrar →' : 'Vender →'}
-                </span>
-              </div>
+            </div>
+            <div className="mt-2">
+              <SalesProgressBar pctSold={sorteo.pct_sold} boletosSold={sorteo.boletos_sold} totalBoletos={sorteo.total_boletos} />
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-muted-foreground text-sm">{Number(sorteo.boletos_available).toLocaleString('es-MX')} disponibles</span>
+              <span className="text-primary text-sm font-medium">{Number(sorteo.price_per_boleto) === 0 ? 'Registrar →' : 'Vender →'}</span>
             </div>
           </button>
         ))}

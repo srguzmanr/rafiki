@@ -1,262 +1,182 @@
 // src/components/organizador/ReportingDashboard.jsx
-//
-// Organizador analytics for a single sorteo.
-// Sections: summary KPIs, vendedor breakdown, daily timeline, CSV export.
-//
-// Giveaway mode (sorteo.price_per_boleto === 0):
-//   - KPIs: "Participantes" replaces "Recaudado", "% Registrado" replaces "% Vendido"
-//   - Vendedor table: revenue columns hidden, registration count shown only
-//   - Daily timeline: revenue label hidden
-//   - CSV: still exports normally; includes marketing_consent column (both modes)
-//
-// Props:
-//   sorteo  — sorteo object from sorteos_with_stats (includes price_per_boleto)
-//   onBack  — back to sorteo detail
 
 import { useState, useEffect } from 'react'
-import {
-  fetchVendedorSummary,
-  fetchDailySales,
-  exportSalesCSV,
-} from '../../lib/sorteosApi'
+import { fetchVendedorSummary, fetchDailySales, exportSalesCSV } from '../../lib/sorteosApi'
 import { formatMXN, LoadingSpinner, ErrorMessage } from '../shared/UI'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table'
+import { Loader2, ArrowLeft, Download } from 'lucide-react'
 
 export function ReportingDashboard({ sorteo, onBack }) {
   const isGiveaway = Number(sorteo.price_per_boleto) === 0
-
   const [vendedores, setVendedores] = useState([])
   const [dailySales, setDailySales] = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState(null)
-  const [exporting, setExporting]   = useState(false)
-  const [exportMsg, setExportMsg]   = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportMsg, setExportMsg] = useState(null)
 
   useEffect(() => {
     async function load() {
-      setLoading(true)
-      setError(null)
-      const [vRes, dRes] = await Promise.all([
-        fetchVendedorSummary(sorteo.id),
-        fetchDailySales(sorteo.id),
-      ])
+      setLoading(true); setError(null)
+      const [vRes, dRes] = await Promise.all([fetchVendedorSummary(sorteo.id), fetchDailySales(sorteo.id)])
       if (vRes.error) setError(vRes.error.message)
-      else {
-        setVendedores(vRes.data || [])
-        setDailySales(dRes.data || [])
-      }
+      else { setVendedores(vRes.data || []); setDailySales(dRes.data || []) }
       setLoading(false)
     }
     load()
   }, [sorteo.id])
 
   async function handleExport() {
-    setExporting(true)
-    setExportMsg(null)
+    setExporting(true); setExportMsg(null)
     const { error } = await exportSalesCSV(sorteo.id, sorteo.title)
     setExporting(false)
     setExportMsg(error ? `Error: ${error.message}` : '✓ Descarga iniciada')
     setTimeout(() => setExportMsg(null), 3000)
   }
 
-  const maxDay    = Math.max(...dailySales.map(d => Number(d.sales_count)), 1)
+  const maxDay = Math.max(...dailySales.map(d => Number(d.sales_count)), 1)
   const totalSold = Number(sorteo.boletos_sold || 0)
 
   if (loading) return <LoadingSpinner message="Cargando reportes..." />
-  if (error)   return <ErrorMessage message={error} />
+  if (error) return <ErrorMessage message={error} />
 
-  // ── KPI card definitions — differ by mode ──
   const kpiCards = isGiveaway
     ? [
-        { label: 'Participantes',  value: totalSold.toLocaleString('es-MX'),                                      color: 'primary' },
-        { label: 'Disponibles',    value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX'),          color: 'secondary' },
-        { label: '% Registrado',   value: `${Math.round(sorteo.pct_sold || 0)}%`,                                 color: 'success' },
-        { label: 'Total lugares',  value: Number(sorteo.total_boletos || 0).toLocaleString('es-MX'),              color: 'info' },
+        { label: 'Participantes', value: totalSold.toLocaleString('es-MX'), color: 'text-primary' },
+        { label: 'Disponibles', value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX'), color: 'text-muted-foreground' },
+        { label: '% Registrado', value: `${Math.round(sorteo.pct_sold || 0)}%`, color: 'text-emerald-600' },
+        { label: 'Total lugares', value: Number(sorteo.total_boletos || 0).toLocaleString('es-MX'), color: 'text-blue-600' },
       ]
     : [
-        { label: 'Boletos vendidos', value: totalSold.toLocaleString('es-MX'),                                    color: 'primary' },
-        { label: 'Disponibles',      value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX'),        color: 'secondary' },
-        { label: 'Recaudado',        value: formatMXN(sorteo.revenue_mxn || 0),                                   color: 'success' },
-        { label: '% Vendido',        value: `${Math.round(sorteo.pct_sold || 0)}%`,                               color: 'info' },
+        { label: 'Boletos vendidos', value: totalSold.toLocaleString('es-MX'), color: 'text-primary' },
+        { label: 'Disponibles', value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX'), color: 'text-muted-foreground' },
+        { label: 'Recaudado', value: formatMXN(sorteo.revenue_mxn || 0), color: 'text-emerald-600' },
+        { label: '% Vendido', value: `${Math.round(sorteo.pct_sold || 0)}%`, color: 'text-blue-600' },
       ]
 
   return (
-    <div>
-      {/* ── Header ── */}
-      <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <div className="d-flex align-items-center gap-2">
-          <button className="btn btn-sm btn-outline-secondary" onClick={onBack}>← Regresar</button>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft className="mr-1 h-4 w-4" /> Regresar</Button>
           <div>
-            <h5 className="mb-0 fw-bold d-flex align-items-center gap-2">
+            <h5 className="font-bold flex items-center gap-2">
               {isGiveaway ? 'Reporte de participaciones' : 'Reporte de ventas'}
-              {isGiveaway && <span className="badge bg-success" style={{ fontSize: '0.7rem' }}>Giveaway</span>}
+              {isGiveaway && <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[0.7rem]">Giveaway</Badge>}
             </h5>
-            <div className="text-muted small">{sorteo.title}</div>
+            <div className="text-muted-foreground text-sm">{sorteo.title}</div>
           </div>
         </div>
-        <div className="d-flex align-items-center gap-2">
-          {exportMsg && (
-            <span className={`small ${exportMsg.startsWith('Error') ? 'text-danger' : 'text-success'}`}>
-              {exportMsg}
-            </span>
-          )}
-          <button
-            className="btn btn-outline-success btn-sm"
-            onClick={handleExport}
-            disabled={exporting || totalSold === 0}
-          >
-            {exporting
-              ? <><span className="spinner-border spinner-border-sm me-1" />Exportando...</>
-              : '⬇ Descargar CSV'
-            }
-          </button>
+        <div className="flex items-center gap-2">
+          {exportMsg && <span className={`text-sm ${exportMsg.startsWith('Error') ? 'text-red-500' : 'text-emerald-600'}`}>{exportMsg}</span>}
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting || totalSold === 0}
+            className="text-emerald-600 border-emerald-300 hover:bg-emerald-50">
+            {exporting ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Exportando...</> : <><Download className="mr-1 h-4 w-4" /> Descargar CSV</>}
+          </Button>
         </div>
       </div>
 
-      {/* ── KPI cards ── */}
-      <div className="row g-3 mb-4">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {kpiCards.map(card => (
-          <div key={card.label} className="col-6 col-md-3">
-            <div className={`card border-0 bg-${card.color} bg-opacity-10 h-100`}>
-              <div className="card-body py-3 text-center">
-                <div className={`fs-4 fw-bold text-${card.color}`}>{card.value}</div>
-                <div className="text-muted small">{card.label}</div>
-              </div>
-            </div>
-          </div>
+          <Card key={card.label} className="border-0 bg-muted/50">
+            <CardContent className="py-3 text-center">
+              <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
+              <div className="text-muted-foreground text-sm">{card.label}</div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* ── Vendedor breakdown ── */}
-      <div className="card mb-4">
-        <div className="card-header bg-white fw-bold">
-          {isGiveaway ? 'Registros por vendedor' : 'Rendimiento por vendedor'}
-        </div>
+      {/* Vendedor breakdown */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{isGiveaway ? 'Registros por vendedor' : 'Rendimiento por vendedor'}</CardTitle>
+        </CardHeader>
         {vendedores.length === 0 ? (
-          <div className="card-body text-muted text-center py-4">
-            Sin datos de vendedores aún.
-          </div>
+          <CardContent className="text-muted-foreground text-center py-8">Sin datos de vendedores aún.</CardContent>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-sm table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>Vendedor</th>
-                  <th className="text-end">{isGiveaway ? 'Registros' : 'Boletos'}</th>
-                  {!isGiveaway && (
-                    <>
-                      <th className="text-end">Confirmados</th>
-                      <th className="text-end">Pendiente</th>
-                      <th className="text-end">Total</th>
-                    </>
-                  )}
-                  <th className="text-muted text-end" style={{ fontSize: '0.75rem' }}>
-                    Última actividad
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead className="text-right">{isGiveaway ? 'Registros' : 'Boletos'}</TableHead>
+                  {!isGiveaway && <><TableHead className="text-right">Confirmados</TableHead><TableHead className="text-right">Pendiente</TableHead><TableHead className="text-right">Total</TableHead></>}
+                  <TableHead className="text-right text-xs">Última actividad</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {vendedores.map(v => (
-                  <tr key={v.vendedor_id}>
-                    <td className="fw-medium">
-                      {v.vendedor_name || <span className="text-muted">(sin nombre)</span>}
-                    </td>
-                    <td className="text-end">{v.total_sales}</td>
-                    {!isGiveaway && (
-                      <>
-                        <td className="text-end text-success">
-                          {formatMXN(v.confirmed_revenue_mxn || 0)}
-                        </td>
-                        <td className="text-end text-warning">
-                          {formatMXN(Number(v.total_revenue_mxn || 0) - Number(v.confirmed_revenue_mxn || 0))}
-                        </td>
-                        <td className="text-end fw-bold">
-                          {formatMXN(Number(v.total_revenue_mxn || 0))}
-                        </td>
-                      </>
-                    )}
-                    <td className="text-end text-muted" style={{ fontSize: '0.75rem' }}>
-                      {v.last_sale_at
-                        ? new Date(v.last_sale_at).toLocaleDateString('es-MX', {
-                            day: 'numeric', month: 'short',
-                          })
-                        : '—'}
-                    </td>
-                  </tr>
+                  <TableRow key={v.vendedor_id}>
+                    <TableCell className="font-medium">{v.vendedor_name || <span className="text-muted-foreground">(sin nombre)</span>}</TableCell>
+                    <TableCell className="text-right">{v.total_sales}</TableCell>
+                    {!isGiveaway && <>
+                      <TableCell className="text-right text-emerald-600">{formatMXN(v.confirmed_revenue_mxn || 0)}</TableCell>
+                      <TableCell className="text-right text-amber-600">{formatMXN(Number(v.total_revenue_mxn || 0) - Number(v.confirmed_revenue_mxn || 0))}</TableCell>
+                      <TableCell className="text-right font-bold">{formatMXN(Number(v.total_revenue_mxn || 0))}</TableCell>
+                    </>}
+                    <TableCell className="text-right text-muted-foreground text-xs">
+                      {v.last_sale_at ? new Date(v.last_sale_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot className="table-light">
-                <tr>
-                  <td className="fw-bold">Total</td>
-                  <td className="text-end fw-bold">
-                    {vendedores.reduce((s, v) => s + Number(v.total_sales || 0), 0)}
-                  </td>
-                  {!isGiveaway && (
-                    <>
-                      <td className="text-end fw-bold text-success">
-                        {formatMXN(vendedores.reduce((s, v) => s + Number(v.confirmed_revenue_mxn || 0), 0))}
-                      </td>
-                      <td className="text-end fw-bold text-warning">
-                        {formatMXN(vendedores.reduce((s, v) =>
-                          s + Number(v.total_revenue_mxn || 0) - Number(v.confirmed_revenue_mxn || 0), 0))}
-                      </td>
-                      <td className="text-end fw-bold">
-                        {formatMXN(vendedores.reduce((s, v) => s + Number(v.total_revenue_mxn || 0), 0))}
-                      </td>
-                    </>
-                  )}
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell className="font-bold">Total</TableCell>
+                  <TableCell className="text-right font-bold">{vendedores.reduce((s, v) => s + Number(v.total_sales || 0), 0)}</TableCell>
+                  {!isGiveaway && <>
+                    <TableCell className="text-right font-bold text-emerald-600">{formatMXN(vendedores.reduce((s, v) => s + Number(v.confirmed_revenue_mxn || 0), 0))}</TableCell>
+                    <TableCell className="text-right font-bold text-amber-600">{formatMXN(vendedores.reduce((s, v) => s + Number(v.total_revenue_mxn || 0) - Number(v.confirmed_revenue_mxn || 0), 0))}</TableCell>
+                    <TableCell className="text-right font-bold">{formatMXN(vendedores.reduce((s, v) => s + Number(v.total_revenue_mxn || 0), 0))}</TableCell>
+                  </>}
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* ── Daily timeline ── */}
-      <div className="card">
-        <div className="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-          <span>{isGiveaway ? 'Registros por día' : 'Ventas por día'}</span>
-          <span className="text-muted small fw-normal">{dailySales.length} días con actividad</span>
-        </div>
+      {/* Daily timeline */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base">{isGiveaway ? 'Registros por día' : 'Ventas por día'}</CardTitle>
+          <span className="text-muted-foreground text-sm">{dailySales.length} días con actividad</span>
+        </CardHeader>
         {dailySales.length === 0 ? (
-          <div className="card-body text-muted text-center py-4">
-            Sin {isGiveaway ? 'registros' : 'ventas'} registradas aún.
-          </div>
+          <CardContent className="text-muted-foreground text-center py-8">Sin {isGiveaway ? 'registros' : 'ventas'} registradas aún.</CardContent>
         ) : (
-          <div className="card-body px-3 py-3">
-            <div className="d-flex flex-column gap-2">
-              {[...dailySales].reverse().map(day => {
-                const pct = Math.max(4, Math.round((Number(day.sales_count) / maxDay) * 100))
-                return (
-                  <div key={day.sale_date} className="d-flex align-items-center gap-3">
-                    <div className="text-muted" style={{ minWidth: 90, fontSize: '0.78rem' }}>
-                      {new Date(day.sale_date + 'T12:00:00').toLocaleDateString('es-MX', {
-                        weekday: 'short', day: 'numeric', month: 'short',
-                      })}
-                    </div>
-                    <div className="flex-grow-1 bg-light rounded" style={{ height: 22, position: 'relative' }}>
-                      <div
-                        className={`rounded h-100 d-flex align-items-center px-2 ${isGiveaway ? 'bg-success' : 'bg-primary'}`}
-                        style={{ width: `${pct}%`, transition: 'width 0.3s', minWidth: 28 }}
-                      >
-                        <span className="text-white" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                          {day.sales_count}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Revenue label only for paid sorteos */}
-                    {!isGiveaway && (
-                      <div className="text-success fw-medium text-end" style={{ minWidth: 80, fontSize: '0.82rem' }}>
-                        {formatMXN(day.revenue_mxn)}
-                      </div>
-                    )}
+          <CardContent className="space-y-2">
+            {[...dailySales].reverse().map(day => {
+              const pct = Math.max(4, Math.round((Number(day.sales_count) / maxDay) * 100))
+              return (
+                <div key={day.sale_date} className="flex items-center gap-3">
+                  <div className="text-muted-foreground text-xs min-w-[90px]">
+                    {new Date(day.sale_date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </div>
-                )
-              })}
-            </div>
-          </div>
+                  <div className="flex-1 bg-muted rounded h-[22px] relative">
+                    <div
+                      className={`rounded h-full flex items-center px-2 ${isGiveaway ? 'bg-emerald-500' : 'bg-primary'}`}
+                      style={{ width: `${pct}%`, transition: 'width 0.3s', minWidth: 28 }}
+                    >
+                      <span className="text-white text-[0.72rem] whitespace-nowrap">{day.sales_count}</span>
+                    </div>
+                  </div>
+                  {!isGiveaway && (
+                    <div className="text-emerald-600 font-medium text-right min-w-[80px] text-[0.82rem]">{formatMXN(day.revenue_mxn)}</div>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

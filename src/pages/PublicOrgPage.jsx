@@ -1,122 +1,96 @@
 // src/pages/PublicOrgPage.jsx
-//
-// Public page listing all active sorteos for an organization.
-// URL: /#/org/:orgSlug
-// No auth required. Shareable link for the org to send to buyers.
 
-import { useState, useEffect }       from 'react'
-import { useParams, Link }           from 'react-router-dom'
-import { fetchPublicSorteosByOrg }   from '../lib/participanteApi'
+import { useState, useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { fetchPublicSorteosByOrg } from '../lib/participanteApi'
 import { LoadingSpinner, ErrorMessage, StatusBadge, SalesProgressBar, formatMXN } from '../components/shared/UI'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 export function PublicOrgPage() {
-  const { orgSlug }             = useParams()
-  const [sorteos, setSorteos]   = useState([])
-  const [orgName, setOrgName]   = useState('')
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
+  const { orgSlug } = useParams()
+  const [sorteos, setSorteos] = useState([])
+  const [orgName, setOrgName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   async function load() {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     const { data, error } = await fetchPublicSorteosByOrg(orgSlug)
-    if (error) {
-      setError('No se pudo cargar la información.')
-    } else {
-      setSorteos(data)
-      if (data.length > 0) setOrgName(data[0].org_name)
-    }
+    if (error) setError('No se pudo cargar la información.')
+    else { setSorteos(data); if (data.length > 0) setOrgName(data[0].org_name) }
     setLoading(false)
   }
 
   useEffect(() => { load() }, [orgSlug])
 
   return (
-    <div className="min-vh-100 bg-light">
-      <nav className="navbar navbar-light bg-white border-bottom px-4 py-3">
-        <span className="navbar-brand fw-bold mb-0">Rafiki</span>
+    <div className="min-h-screen bg-background">
+      <nav className="bg-white border-b px-4 py-3 flex items-center">
+        <img src="/RafikiLogos03.png" alt="Rafiki" className="h-7 mx-auto" />
       </nav>
 
-      <div className="container py-4" style={{ maxWidth: 700 }}>
-
+      <div className="max-w-[700px] mx-auto px-4 py-4">
         {orgName && (
           <div className="mb-4">
-            <h3 className="fw-bold mb-0">{orgName}</h3>
-            <p className="text-muted">Sorteos activos</p>
+            <h3 className="text-2xl font-bold">{orgName}</h3>
+            <p className="text-muted-foreground">Sorteos activos</p>
           </div>
         )}
 
         {loading && <LoadingSpinner message="Cargando sorteos..." />}
-        {error   && <ErrorMessage message={error} onRetry={load} />}
+        {error && <ErrorMessage message={error} onRetry={load} />}
 
         {!loading && !error && sorteos.length === 0 && (
-          <div className="text-center py-5">
-            <div style={{ fontSize: '3rem' }}>🎟️</div>
-            <p className="text-muted mt-2">No hay sorteos activos en este momento.</p>
+          <div className="text-center py-12">
+            <div className="text-5xl">🎟️</div>
+            <p className="text-muted-foreground mt-2">No hay sorteos activos en este momento.</p>
           </div>
         )}
 
-        <div className="d-flex flex-column gap-3">
+        <div className="flex flex-col gap-3">
           {sorteos.map(sorteo => (
-            <Link
-              key={sorteo.id}
-              to={`/sorteo/${orgSlug}/${sorteo.id}`}
-              className="text-decoration-none"
-            >
-              <div className="card shadow-sm border-0" style={{ borderRadius: 12 }}>
-                <div className="card-body p-3">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <h5 className="fw-bold mb-0 text-dark">{sorteo.title}</h5>
+            <Link key={sorteo.id} to={`/sorteo/${orgSlug}/${sorteo.id}`} className="no-underline">
+              <Card className="border-0 shadow-sm rounded-xl hover:shadow-md transition-shadow">
+                <CardContent className="p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-bold text-foreground">{sorteo.title}</h5>
                     <StatusBadge status={sorteo.status} />
                   </div>
 
-                  {sorteo.cause && (
-                    <p className="text-muted small mb-2"><em>{sorteo.cause}</em></p>
-                  )}
+                  {sorteo.cause && <p className="text-muted-foreground text-sm mb-2"><em>{sorteo.cause}</em></p>}
 
-                  {/* Prize preview */}
                   {Array.isArray(sorteo.prizes) && sorteo.prizes.length > 0 && (
                     <div className="mb-2">
-                      <span className="badge bg-light text-dark border me-1">
-                        🏆 {sorteo.prizes[0]?.title}
-                      </span>
+                      <Badge variant="outline" className="mr-1">🏆 {sorteo.prizes[0]?.title}</Badge>
                       {sorteo.prizes.length > 1 && (
-                        <span className="text-muted small">
-                          + {sorteo.prizes.length - 1} premios más
-                        </span>
+                        <span className="text-muted-foreground text-sm">+ {sorteo.prizes.length - 1} premios más</span>
                       )}
                     </div>
                   )}
 
-                  <div className="d-flex justify-content-between align-items-center mb-2">
+                  <div className="flex justify-between items-center mb-2">
                     {Number(sorteo.price_per_boleto) === 0
-                      ? <span className="badge bg-success fs-6 px-2 py-1">GRATIS</span>
-                      : <span className="text-primary fw-bold">{formatMXN(sorteo.price_per_boleto)}</span>
-                    }
+                      ? <Badge className="bg-emerald-600 hover:bg-emerald-600 text-base px-2 py-1">GRATIS</Badge>
+                      : <span className="text-primary font-bold">{formatMXN(sorteo.price_per_boleto)}</span>}
                     {sorteo.drawing_date && (
-                      <span className="text-muted small">
-                        Sorteo: {new Date(sorteo.drawing_date).toLocaleDateString('es-MX', {
-                          day: 'numeric', month: 'short', year: 'numeric'
-                        })}
+                      <span className="text-muted-foreground text-sm">
+                        Sorteo: {new Date(sorteo.drawing_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                   </div>
 
-                  <SalesProgressBar
-                    pctSold={sorteo.pct_sold}
-                    boletosSold={sorteo.boletos_sold || 0}
-                    totalBoletos={sorteo.total_boletos}
-                  />
+                  <SalesProgressBar pctSold={sorteo.pct_sold} boletosSold={sorteo.boletos_sold || 0} totalBoletos={sorteo.total_boletos} />
 
                   {sorteo.status === 'active' && (
-                    <div className="text-end mt-2">
-                      <span className="text-primary small fw-medium">
+                    <div className="text-right mt-2">
+                      <span className="text-primary text-sm font-medium">
                         {Number(sorteo.price_per_boleto) === 0 ? 'Ver y participar →' : 'Ver y comprar →'}
                       </span>
                     </div>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </Link>
           ))}
         </div>

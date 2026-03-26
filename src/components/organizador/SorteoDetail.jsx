@@ -1,54 +1,42 @@
-// src/components/sorteos/SorteoDetail.jsx
-// Full detail view for a single sorteo.
-// Used by Organizador to manage vendedores and monitor sales.
-//
-// Props:
-//   sorteoId — the sorteo to display
-//   orgId    — current user's org
-//   userId   — current user's profile id
-//   onBack   — callback to return to the list
+// src/components/organizador/SorteoDetail.jsx
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  fetchSorteoById,
-  fetchVendedorSummary,
-  fetchOrgVendedores,
-  assignVendedor,
-  removeVendedor,
-  drawWinners,
+  fetchSorteoById, fetchVendedorSummary, fetchOrgVendedores,
+  assignVendedor, removeVendedor, drawWinners,
 } from '../../lib/sorteosApi'
 import { StatusBadge, LoadingSpinner, ErrorMessage, SalesProgressBar, formatMXN, ConfirmModal } from '../shared/UI'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Loader2, ArrowLeft, Pencil, BarChart3, Dice5 } from 'lucide-react'
 
 export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenReporting }) {
-  const [sorteo, setSorteo]             = useState(null)
-  const [vendedores, setVendedores]     = useState([])
+  const [sorteo, setSorteo] = useState(null)
+  const [vendedores, setVendedores] = useState([])
   const [allVendedores, setAllVendedores] = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState(null)
-  const [confirm, setConfirm]           = useState(null)
-  const [assigning, setAssigning]       = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [confirm, setConfirm] = useState(null)
+  const [assigning, setAssigning] = useState(false)
   const [selectedVendedor, setSelectedVendedor] = useState('')
-  const [drawing, setDrawing]           = useState(false)
-  const [drawError, setDrawError]       = useState(null)
+  const [drawing, setDrawing] = useState(false)
+  const [drawError, setDrawError] = useState(null)
 
   const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
       const [sorteoRes, vendedorRes, allVendedoresRes] = await Promise.all([
-        fetchSorteoById(sorteoId),
-        fetchVendedorSummary(sorteoId),
-        fetchOrgVendedores(orgId),
+        fetchSorteoById(sorteoId), fetchVendedorSummary(sorteoId), fetchOrgVendedores(orgId),
       ])
       if (sorteoRes.error) throw sorteoRes.error
       setSorteo(sorteoRes.data)
       setVendedores(vendedorRes.data || [])
       setAllVendedores(allVendedoresRes.data || [])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
   }, [sorteoId, orgId])
 
   useEffect(() => { loadData() }, [loadData])
@@ -59,31 +47,21 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
     try {
       const { error } = await assignVendedor(selectedVendedor, sorteoId, orgId, userId)
       if (error) throw error
-      setSelectedVendedor('')
-      await loadData()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setAssigning(false)
-    }
+      setSelectedVendedor(''); await loadData()
+    } catch (err) { setError(err.message) }
+    finally { setAssigning(false) }
   }
 
-  // ── Draw winners ──
   function handleDraw() {
     setConfirm({
       title: 'Realizar Sorteo',
       message: `¿Estás seguro? Esta acción no se puede deshacer.\n\nSe seleccionarán ganador(es) de ${Number(sorteo.boletos_sold || 0).toLocaleString('es-MX')} boletos vendidos.`,
       confirmLabel: '🎲 Realizar Sorteo',
-      danger: false,
       onConfirm: async () => {
-        setDrawing(true)
-        setDrawError(null)
+        setDrawing(true); setDrawError(null)
         const { data, error } = await drawWinners(sorteoId)
         setDrawing(false)
-        if (error) {
-          setDrawError(error.message)
-          throw error
-        }
+        if (error) { setDrawError(error.message); throw error }
         await loadData()
       },
     })
@@ -93,8 +71,7 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
     setConfirm({
       title: 'Quitar vendedor',
       message: `¿Quitar a ${vendedorName} de este sorteo? Sus ventas ya registradas no se perderán.`,
-      confirmLabel: 'Quitar',
-      danger: true,
+      confirmLabel: 'Quitar', danger: true,
       onConfirm: async () => {
         const { error } = await removeVendedor(vendedorId, sorteoId)
         if (error) throw error
@@ -107,203 +84,142 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
   if (error)   return <ErrorMessage message={error} onRetry={loadData} />
   if (!sorteo) return <ErrorMessage message="Sorteo no encontrado." />
 
-  // Vendedores not yet assigned (for the picker)
   const assignedIds = new Set(vendedores.map(v => v.vendedor_id))
   const unassigned  = allVendedores.filter(v => !assignedIds.has(v.user_id))
 
   return (
     <>
-      {/* ── Header ── */}
-      <div className="d-flex align-items-center gap-3 mb-4">
-        <button className="btn btn-sm btn-outline-secondary" onClick={onBack}>
-          ← Regresar
-        </button>
-        <div className="flex-grow-1">
-          <div className="d-flex align-items-center gap-2">
-            <h4 className="mb-0">{sorteo.title}</h4>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <Button variant="outline" size="sm" onClick={onBack}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Regresar
+        </Button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-xl font-bold">{sorteo.title}</h4>
             <StatusBadge status={sorteo.status} />
           </div>
-          {sorteo.cause && <p className="text-muted small mb-0 mt-1"><em>{sorteo.cause}</em></p>}
+          {sorteo.cause && <p className="text-muted-foreground text-sm mt-1"><em>{sorteo.cause}</em></p>}
         </div>
-        <div className="d-flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 shrink-0">
           {sorteo.status === 'draft' && (
-            <button className="btn btn-outline-primary btn-sm" onClick={() => onEdit(sorteoId)}>
-              Editar
-            </button>
+            <Button variant="outline" size="sm" onClick={() => onEdit(sorteoId)}>
+              <Pencil className="mr-1 h-4 w-4" /> Editar
+            </Button>
           )}
           {onOpenReporting && Number(sorteo.boletos_sold || 0) > 0 && (
-            <button
-              className="btn btn-outline-info btn-sm"
-              onClick={() => onOpenReporting(sorteo)}
-            >
-              📊 Reporte
-            </button>
+            <Button variant="outline" size="sm" onClick={() => onOpenReporting(sorteo)}>
+              <BarChart3 className="mr-1 h-4 w-4" /> Reporte
+            </Button>
           )}
           {sorteo.status === 'closed' && Number(sorteo.boletos_sold || 0) > 0 && (
-            <button
-              className="btn btn-warning btn-sm fw-bold"
-              onClick={handleDraw}
-              disabled={drawing}
-            >
-              {drawing
-                ? <><span className="spinner-border spinner-border-sm me-1" />Sorteando...</>
-                : '🎲 Realizar Sorteo'
-              }
-            </button>
+            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white font-bold" onClick={handleDraw} disabled={drawing}>
+              {drawing ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Sorteando...</> : <><Dice5 className="mr-1 h-4 w-4" /> Realizar Sorteo</>}
+            </Button>
           )}
         </div>
       </div>
 
-      {/* ── Draw error ── */}
-      {drawError && (
-        <div className="alert alert-danger mb-4">{drawError}</div>
-      )}
+      {drawError && <Alert variant="destructive" className="mb-4"><AlertDescription>{drawError}</AlertDescription></Alert>}
 
-      {/* ── Drawing Result (shown when status = drawn) ── */}
+      {/* Drawing Result */}
       {sorteo.status === 'drawn' && sorteo.drawing_result && (
-        <div className="card border-success mb-4">
-          <div className="card-header bg-success text-white">
-            <h6 className="mb-0">🎉 Resultado del Sorteo</h6>
-          </div>
-          <div className="card-body">
-            <div className="d-flex flex-column gap-3">
-              {(sorteo.drawing_result.winners || []).map((w, i) => (
-                <div key={w.prize_id || i} className="d-flex align-items-center gap-3 p-3 bg-light rounded-3">
-                  <div
-                    className="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-                    style={{ width: 48, height: 48, fontSize: '1.2rem' }}
-                  >
-                    {w.prize_position}°
-                  </div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold">{w.prize_name}</div>
-                    <div className="text-muted small">Premio {w.prize_position}° lugar</div>
-                  </div>
-                  <div className="text-end">
-                    <div className="fw-bold text-success fs-5">#{w.boleto_numero}</div>
-                    <div className="text-muted small">{w.participant_name}</div>
-                  </div>
+        <Card className="border-emerald-300 mb-4">
+          <CardHeader className="bg-emerald-600 text-white rounded-t-lg py-3">
+            <CardTitle className="text-base">🎉 Resultado del Sorteo</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {(sorteo.drawing_result.winners || []).map((w, i) => (
+              <div key={w.prize_id || i} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="rounded-full bg-amber-400 text-amber-900 flex items-center justify-center font-bold shrink-0 w-12 h-12 text-lg">
+                  {w.prize_position}°
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-top d-flex justify-content-between text-muted small">
+                <div className="flex-1">
+                  <div className="font-bold">{w.prize_name}</div>
+                  <div className="text-muted-foreground text-sm">Premio {w.prize_position}° lugar</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-emerald-600 text-xl">#{w.boleto_numero}</div>
+                  <div className="text-muted-foreground text-sm">{w.participant_name}</div>
+                </div>
+              </div>
+            ))}
+            <div className="mt-3 pt-3 border-t flex justify-between text-muted-foreground text-sm flex-wrap gap-2">
               <span>Método: {sorteo.drawing_result.method === 'postgresql_random' ? 'Aleatorio (PostgreSQL)' : sorteo.drawing_result.method}</span>
               <span>Pool: {sorteo.drawing_result.eligible_pool_size} boletos elegibles</span>
               <span>{new Date(sorteo.drawing_result.drawn_at).toLocaleString('es-MX', { timeZone: 'America/Hermosillo' })}</span>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* ── Summary stats ── */}
-      <div className="row g-3 mb-4">
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
-          { label: 'Total boletos',    value: Number(sorteo.total_boletos).toLocaleString('es-MX') },
-          { label: 'Vendidos',         value: Number(sorteo.boletos_sold || 0).toLocaleString('es-MX') },
-          { label: 'Disponibles',      value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX') },
-          { label: 'Recaudado',        value: formatMXN(sorteo.revenue_mxn || 0), highlight: true },
+          { label: 'Total boletos', value: Number(sorteo.total_boletos).toLocaleString('es-MX') },
+          { label: 'Vendidos', value: Number(sorteo.boletos_sold || 0).toLocaleString('es-MX') },
+          { label: 'Disponibles', value: Number(sorteo.boletos_available || 0).toLocaleString('es-MX') },
+          { label: 'Recaudado', value: formatMXN(sorteo.revenue_mxn || 0), highlight: true },
         ].map(stat => (
-          <div key={stat.label} className="col-6 col-md-3">
-            <div className="card text-center h-100">
-              <div className="card-body py-3">
-                <div className={`fs-5 fw-bold ${stat.highlight ? 'text-success' : ''}`}>
-                  {stat.value}
-                </div>
-                <div className="text-muted small">{stat.label}</div>
-              </div>
-            </div>
-          </div>
+          <Card key={stat.label} className="text-center">
+            <CardContent className="py-3">
+              <div className={`text-xl font-bold ${stat.highlight ? 'text-emerald-600' : ''}`}>{stat.value}</div>
+              <div className="text-muted-foreground text-sm">{stat.label}</div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Progress */}
-      <div className="card mb-4">
-        <div className="card-body">
-          <SalesProgressBar
-            pctSold={sorteo.pct_sold}
-            boletosSold={sorteo.boletos_sold || 0}
-            totalBoletos={sorteo.total_boletos}
-          />
-        </div>
-      </div>
+      <Card className="mb-4">
+        <CardContent className="py-4">
+          <SalesProgressBar pctSold={sorteo.pct_sold} boletosSold={sorteo.boletos_sold || 0} totalBoletos={sorteo.total_boletos} />
+        </CardContent>
+      </Card>
 
-      {/* ── Info row ── */}
-      <div className="row g-3 mb-4">
-        <div className="col-md-6">
-          <div className="card h-100">
-            <div className="card-header"><h6 className="mb-0">Detalles</h6></div>
-            <div className="card-body small">
-              <table className="table table-sm table-borderless mb-0">
-                <tbody>
-                  <tr>
-                    <td className="text-muted">Precio por boleto</td>
-                    <td className="fw-medium">{formatMXN(sorteo.price_per_boleto)}</td>
-                  </tr>
-                  {sorteo.permit_number && (
-                    <tr>
-                      <td className="text-muted">Permiso</td>
-                      <td className="fw-medium">{sorteo.permit_number}</td>
-                    </tr>
-                  )}
-                  {sorteo.start_date && (
-                    <tr>
-                      <td className="text-muted">Inicio ventas</td>
-                      <td>{new Date(sorteo.start_date).toLocaleDateString('es-MX')}</td>
-                    </tr>
-                  )}
-                  {sorteo.end_date && (
-                    <tr>
-                      <td className="text-muted">Cierre ventas</td>
-                      <td>{new Date(sorteo.end_date).toLocaleDateString('es-MX')}</td>
-                    </tr>
-                  )}
-                  {sorteo.drawing_date && (
-                    <tr>
-                      <td className="text-muted">Fecha sorteo</td>
-                      <td>{new Date(sorteo.drawing_date).toLocaleDateString('es-MX')}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+      {/* Info row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Detalles</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <div className="flex justify-between"><span className="text-muted-foreground">Precio por boleto</span><span className="font-medium">{formatMXN(sorteo.price_per_boleto)}</span></div>
+            {sorteo.permit_number && <div className="flex justify-between"><span className="text-muted-foreground">Permiso</span><span className="font-medium">{sorteo.permit_number}</span></div>}
+            {sorteo.start_date && <div className="flex justify-between"><span className="text-muted-foreground">Inicio ventas</span><span>{new Date(sorteo.start_date).toLocaleDateString('es-MX')}</span></div>}
+            {sorteo.end_date && <div className="flex justify-between"><span className="text-muted-foreground">Cierre ventas</span><span>{new Date(sorteo.end_date).toLocaleDateString('es-MX')}</span></div>}
+            {sorteo.drawing_date && <div className="flex justify-between"><span className="text-muted-foreground">Fecha sorteo</span><span>{new Date(sorteo.drawing_date).toLocaleDateString('es-MX')}</span></div>}
+          </CardContent>
+        </Card>
 
-        <div className="col-md-6">
-          <div className="card h-100">
-            <div className="card-header">
-              <h6 className="mb-0">Estado del sorteo</h6>
-            </div>
-            <div className="card-body">
-              <div className="d-flex flex-column gap-2">
-                {['draft', 'active', 'closed', 'drawn'].map((s, i) => (
-                  <div key={s} className="d-flex align-items-center gap-2">
-                    <div className={`rounded-circle ${sorteo.status === s ? 'bg-primary' : sorteo.status === 'drawn' || (['active','closed','drawn'].indexOf(s) < ['active','closed','drawn'].indexOf(sorteo.status)) ? 'bg-success' : 'bg-light border'}`}
-                      style={{ width: 12, height: 12, flexShrink: 0 }}
-                    />
-                    <span className={sorteo.status === s ? 'fw-bold' : 'text-muted'}>
-                      { {draft:'1. Borrador', active:'2. Activo (ventas abiertas)', closed:'3. Cerrado (ventas cerradas)', drawn:'4. Sorteado'}[s] }
-                    </span>
-                  </div>
-                ))}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Estado del sorteo</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {['draft', 'active', 'closed', 'drawn'].map((s) => (
+              <div key={s} className="flex items-center gap-2">
+                <div className={`rounded-full w-3 h-3 shrink-0 ${
+                  sorteo.status === s ? 'bg-primary'
+                  : sorteo.status === 'drawn' || (['active','closed','drawn'].indexOf(s) < ['active','closed','drawn'].indexOf(sorteo.status)) ? 'bg-emerald-500'
+                  : 'bg-muted border'
+                }`} />
+                <span className={sorteo.status === s ? 'font-bold' : 'text-muted-foreground'}>
+                  {{draft:'1. Borrador', active:'2. Activo (ventas abiertas)', closed:'3. Cerrado (ventas cerradas)', drawn:'4. Sorteado'}[s]}
+                </span>
               </div>
-            </div>
-          </div>
-        </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* ── Vendedores ── */}
-      <div className="card mb-4">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h6 className="mb-0">Vendedores asignados</h6>
-          <span className="badge bg-secondary">{vendedores.length}</span>
-        </div>
-        <div className="card-body">
-          {/* Assign picker */}
+      {/* Vendedores */}
+      <Card className="mb-4">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base">Vendedores asignados</CardTitle>
+          <Badge variant="secondary">{vendedores.length}</Badge>
+        </CardHeader>
+        <CardContent>
           {sorteo.status !== 'drawn' && (
-            <div className="d-flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3">
               <select
-                className="form-select form-select-sm"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={selectedVendedor}
                 onChange={e => setSelectedVendedor(e.target.value)}
                 disabled={assigning}
@@ -315,66 +231,56 @@ export function SorteoDetail({ sorteoId, orgId, userId, onBack, onEdit, onOpenRe
                   </option>
                 ))}
               </select>
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={handleAssign}
-                disabled={!selectedVendedor || assigning}
-              >
-                {assigning ? <span className="spinner-border spinner-border-sm" /> : 'Asignar'}
-              </button>
+              <Button size="sm" onClick={handleAssign} disabled={!selectedVendedor || assigning}>
+                {assigning ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Asignar'}
+              </Button>
             </div>
           )}
 
-          {/* Vendedor table */}
           {vendedores.length === 0 ? (
-            <p className="text-muted small mb-0">Sin vendedores asignados aún.</p>
+            <p className="text-muted-foreground text-sm">Sin vendedores asignados aún.</p>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Vendedor</th>
-                    <th className="text-end">Ventas</th>
-                    <th className="text-end">Recaudado</th>
-                    <th className="text-end">Pendiente</th>
-                    <th className="text-end">Última venta</th>
-                    {sorteo.status !== 'drawn' && <th />}
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead className="text-right">Ventas</TableHead>
+                    <TableHead className="text-right">Recaudado</TableHead>
+                    <TableHead className="text-right">Pendiente</TableHead>
+                    <TableHead className="text-right">Última venta</TableHead>
+                    {sorteo.status !== 'drawn' && <TableHead />}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {vendedores.map(v => (
-                    <tr key={v.vendedor_id}>
-                      <td>
-                        <div className="fw-medium">{v.vendedor_name || '—'}</div>
-                        <div className="text-muted small">{v.vendedor_email}</div>
-                      </td>
-                      <td className="text-end">{v.total_sales}</td>
-                      <td className="text-end text-success">{formatMXN(v.confirmed_revenue_mxn)}</td>
-                      <td className="text-end text-warning">{formatMXN(v.total_revenue_mxn - v.confirmed_revenue_mxn)}</td>
-                      <td className="text-end text-muted small">
-                        {v.last_sale_at
-                          ? new Date(v.last_sale_at).toLocaleDateString('es-MX')
-                          : '—'
-                        }
-                      </td>
+                    <TableRow key={v.vendedor_id}>
+                      <TableCell>
+                        <div className="font-medium">{v.vendedor_name || '—'}</div>
+                        <div className="text-muted-foreground text-sm">{v.vendedor_email}</div>
+                      </TableCell>
+                      <TableCell className="text-right">{v.total_sales}</TableCell>
+                      <TableCell className="text-right text-emerald-600">{formatMXN(v.confirmed_revenue_mxn)}</TableCell>
+                      <TableCell className="text-right text-amber-600">{formatMXN(v.total_revenue_mxn - v.confirmed_revenue_mxn)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-sm">
+                        {v.last_sale_at ? new Date(v.last_sale_at).toLocaleDateString('es-MX') : '—'}
+                      </TableCell>
                       {sorteo.status !== 'drawn' && (
-                        <td className="text-end">
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleRemove(v.vendedor_id, v.vendedor_name)}
-                          >
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50"
+                            onClick={() => handleRemove(v.vendedor_id, v.vendedor_name)}>
                             Quitar
-                          </button>
-                        </td>
+                          </Button>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <ConfirmModal config={confirm} onClose={() => setConfirm(null)} />
     </>

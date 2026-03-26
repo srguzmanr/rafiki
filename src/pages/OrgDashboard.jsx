@@ -1,6 +1,5 @@
 // src/pages/OrgDashboard.jsx
 // Master page for Organizadores.
-// Views: LIST, CREATE, EDIT, DETAIL, REPORTING
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth }                from '../context/AuthContext'
@@ -10,6 +9,9 @@ import { SorteoForm }             from '../components/organizador/SorteoForm'
 import { SorteoDetail }           from '../components/organizador/SorteoDetail'
 import { ReportingDashboard }     from '../components/organizador/ReportingDashboard'
 import { LoadingSpinner, ErrorMessage } from '../components/shared/UI'
+import { Layout }                 from '../components/shared/Layout'
+import { Button }                 from '@/components/ui/button'
+import { Plus, ArrowLeft } from 'lucide-react'
 
 const VIEW = {
   LIST:      'list',
@@ -73,31 +75,21 @@ export function OrgDashboard() {
     setView(VIEW.DETAIL)
   }
 
+  const navActions = view === VIEW.LIST ? (
+    <Button size="sm" variant="outline" onClick={() => setView(VIEW.CREATE)}
+      className="text-white border-white/30 hover:bg-white/10">
+      <Plus className="mr-1 h-4 w-4" /> Nuevo sorteo
+    </Button>
+  ) : (
+    <Button size="sm" variant="ghost" onClick={handleBackToList}
+      className="text-white hover:bg-white/10">
+      <ArrowLeft className="mr-1 h-4 w-4" /> Sorteos
+    </Button>
+  )
+
   return (
-    <div className="min-vh-100 bg-light">
-
-      {/* Navbar */}
-      <nav className="navbar navbar-dark navbar-rafiki px-3 py-2">
-        <div className="d-flex align-items-center gap-2 w-100">
-          {view !== VIEW.LIST && (
-            <button
-              className="btn btn-sm btn-link text-white p-0 me-1"
-              onClick={handleBackToList}
-              style={{ fontSize: '1.3rem', lineHeight: 1, textDecoration: 'none' }}
-            >←</button>
-          )}
-          <span className="navbar-brand fw-bold mb-0 me-auto">Rafiki</span>
-          {view === VIEW.LIST && (
-            <button
-              className="btn btn-sm btn-outline-light me-2"
-              onClick={() => setView(VIEW.CREATE)}
-            >+ Nuevo sorteo</button>
-          )}
-          <button className="btn btn-sm btn-outline-light" onClick={signOut}>Salir</button>
-        </div>
-      </nav>
-
-      <div className="container-fluid px-3 py-4" style={{ maxWidth: 900 }}>
+    <Layout title="Organizador" actions={navActions}>
+      <div className="w-full px-3 py-4 max-w-[900px] mx-auto">
 
         {view === VIEW.LIST && (
           <>
@@ -151,6 +143,6 @@ export function OrgDashboard() {
           />
         )}
       </div>
-    </div>
+    </Layout>
   )
 }

@@ -1,422 +1,235 @@
 // src/components/participante/PurchaseFlow.jsx
-//
-// Multi-step entry/purchase flow for participantes.
-// Step 1: Boleto selection (BoletoCart)
-// Step 2: Buyer info (name, phone, email, marketing consent)
-// Step 3: Confirmation
-// Step 4: Success
-//
-// Giveaway mode (sorteo.price_per_boleto === 0):
-//   - Step 2: cart chip shows "{N} boletos seleccionados", no "$0.00"
-//   - Step 3: no Stripe placeholder, simpler "Confirma tu participación" header
-//   - Step 3: confirm button reads "Confirmar participación"
-//   - Step 4: "¡Estás participando!" headline, "✓ Confirmado" badge (DB auto-confirms)
-//
-// Validation (both modes):
-//   - Name: minimum 2 words (first + last name required)
-//   - Phone: minimum 10 digits
-//   - Email: format check
 
-import { useState }             from 'react'
-import { BoletoCart }           from './BoletoCart'
-import { claimBoletosOnline }   from '../../lib/participanteApi'
-import { formatMXN }            from '../shared/UI'
+import { useState } from 'react'
+import { BoletoCart } from './BoletoCart'
+import { claimBoletosOnline } from '../../lib/participanteApi'
+import { formatMXN } from '../shared/UI'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, ArrowLeft, CreditCard } from 'lucide-react'
 
 const STEPS = { CART: 'cart', INFO: 'info', CONFIRM: 'confirm', SUCCESS: 'success' }
 
-// ── Validation helpers ─────────────────────────────────────────────────────
-
-function hasMinTwoWords(str) {
-  return str.trim().split(/\s+/).filter(Boolean).length >= 2
-}
-
-function hasMinDigits(str, min) {
-  return (str.replace(/\D/g, '').length) >= min
-}
-
-function isValidEmail(str) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim())
-}
-
-// ── Component ─────────────────────────────────────────────────────────────
+function hasMinTwoWords(str) { return str.trim().split(/\s+/).filter(Boolean).length >= 2 }
+function hasMinDigits(str, min) { return (str.replace(/\D/g, '').length) >= min }
+function isValidEmail(str) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim()) }
 
 export function PurchaseFlow({ sorteo, participanteId, onComplete, onBack }) {
   const isGiveaway = Number(sorteo.price_per_boleto) === 0
-
-  const [step, setStep]       = useState(STEPS.CART)
-  const [cart, setCart]       = useState([])
-  const [buyer, setBuyer]     = useState({ name: '', phone: '', email: '' })
+  const [step, setStep] = useState(STEPS.CART)
+  const [cart, setCart] = useState([])
+  const [buyer, setBuyer] = useState({ name: '', phone: '', email: '' })
   const [marketingConsent, setMarketingConsent] = useState(true)
-  const [fieldErrors, setFieldErrors]   = useState({})
-  const [submitting, setSubmitting]     = useState(false)
-  const [submitError, setSubmitError]   = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const [purchaseResult, setPurchaseResult] = useState(null)
 
-  // ── Step 1 → 2 ──
-  function handleCartNext() {
-    if (cart.length === 0) return
-    setStep(STEPS.INFO)
-    setSubmitError(null)
-  }
+  function handleCartNext() { if (cart.length === 0) return; setStep(STEPS.INFO); setSubmitError(null) }
 
-  // ── Validate buyer info ──
   function validateBuyer() {
     const errs = {}
-
-    if (!buyer.name.trim()) {
-      errs.name = 'El nombre es requerido.'
-    } else if (!hasMinTwoWords(buyer.name)) {
-      errs.name = 'Ingresa tu nombre completo (nombre y apellido).'
-    }
-
-    if (!buyer.phone.trim()) {
-      errs.phone = 'El teléfono es requerido.'
-    } else if (!hasMinDigits(buyer.phone, 10)) {
-      errs.phone = 'El teléfono debe tener al menos 10 dígitos.'
-    }
-
-    if (!buyer.email.trim()) {
-      errs.email = 'El correo es requerido para recibir tu confirmación.'
-    } else if (!isValidEmail(buyer.email)) {
-      errs.email = 'Ingresa un correo válido.'
-    }
-
+    if (!buyer.name.trim()) errs.name = 'El nombre es requerido.'
+    else if (!hasMinTwoWords(buyer.name)) errs.name = 'Ingresa tu nombre completo (nombre y apellido).'
+    if (!buyer.phone.trim()) errs.phone = 'El teléfono es requerido.'
+    else if (!hasMinDigits(buyer.phone, 10)) errs.phone = 'El teléfono debe tener al menos 10 dígitos.'
+    if (!buyer.email.trim()) errs.email = 'El correo es requerido para recibir tu confirmación.'
+    else if (!isValidEmail(buyer.email)) errs.email = 'Ingresa un correo válido.'
     return errs
   }
 
-  // ── Step 2 → 3 ──
   function handleInfoNext() {
     const errs = validateBuyer()
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); return }
-    setFieldErrors({})
-    setStep(STEPS.CONFIRM)
+    setFieldErrors({}); setStep(STEPS.CONFIRM)
   }
 
-  // ── Step 3: Submit ──
   async function handlePurchase() {
-    setSubmitting(true)
-    setSubmitError(null)
-
+    setSubmitting(true); setSubmitError(null)
     const { data, error, unavailable } = await claimBoletosOnline({
-      sorteoId:          sorteo.id,
-      numeros:           cart,
-      buyerName:         buyer.name.trim(),
-      buyerPhone:        buyer.phone.trim(),
-      buyerEmail:        buyer.email.trim(),
-      participanteId,
-      marketingConsent,
+      sorteoId: sorteo.id, numeros: cart, buyerName: buyer.name.trim(),
+      buyerPhone: buyer.phone.trim(), buyerEmail: buyer.email.trim(), participanteId, marketingConsent,
     })
-
     setSubmitting(false)
-
     if (error) {
-      if (unavailable.length > 0) {
-        setCart(prev => prev.filter(n => !unavailable.includes(n)))
-        setStep(STEPS.CART)
-      }
-      setSubmitError(error.message)
-      return
+      if (unavailable.length > 0) { setCart(prev => prev.filter(n => !unavailable.includes(n))); setStep(STEPS.CART) }
+      setSubmitError(error.message); return
     }
-
-    setPurchaseResult(data)
-    setStep(STEPS.SUCCESS)
-    onComplete?.()
+    setPurchaseResult(data); setStep(STEPS.SUCCESS); onComplete?.()
   }
 
   const totalAmount = cart.length * Number(sorteo.price_per_boleto)
 
-  // ────────────────────────────────────────────────────────────────────────
   // STEP 1: CART
-  // ────────────────────────────────────────────────────────────────────────
   if (step === STEPS.CART) return (
-    <div>
-      <div className="d-flex align-items-center gap-2 mb-4">
-        <button className="btn btn-sm btn-outline-secondary" onClick={onBack}>← Regresar</button>
-        <h5 className="mb-0">
-          {isGiveaway ? 'Elige tus números' : 'Selecciona tus boletos'}
-        </h5>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft className="mr-1 h-4 w-4" /> Regresar</Button>
+        <h5 className="font-bold">{isGiveaway ? 'Elige tus números' : 'Selecciona tus boletos'}</h5>
       </div>
-
       <BoletoCart sorteo={sorteo} cart={cart} onCartChange={setCart} />
-
-      {submitError && <div className="alert alert-warning mt-3">{submitError}</div>}
-
-      <button
-        className={`btn w-100 mt-4 ${isGiveaway ? 'btn-success' : 'btn-primary'}`}
-        onClick={handleCartNext}
-        disabled={cart.length === 0}
-        style={{ minHeight: 52, fontSize: '1rem', fontWeight: 600 }}
+      {submitError && <Alert className="bg-amber-50 border-amber-200"><AlertDescription className="text-amber-800">{submitError}</AlertDescription></Alert>}
+      <Button
+        className={`w-full h-[52px] text-base font-semibold ${isGiveaway ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+        onClick={handleCartNext} disabled={cart.length === 0}
       >
-        {/* Giveaway: no price suffix. Paid: show total. */}
         Continuar con {cart.length} boleto{cart.length !== 1 ? 's' : ''}
         {!isGiveaway && cart.length > 0 && ` · ${formatMXN(totalAmount)}`}
-      </button>
+      </Button>
     </div>
   )
 
-  // ────────────────────────────────────────────────────────────────────────
   // STEP 2: BUYER INFO
-  // ────────────────────────────────────────────────────────────────────────
   if (step === STEPS.INFO) return (
-    <div>
-      <div className="d-flex align-items-center gap-2 mb-4">
-        <button className="btn btn-sm btn-outline-secondary" onClick={() => setStep(STEPS.CART)}>
-          ← Cambiar {isGiveaway ? 'números' : 'boletos'}
-        </button>
-        <h5 className="mb-0">Tus datos</h5>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => setStep(STEPS.CART)}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Cambiar {isGiveaway ? 'números' : 'boletos'}
+        </Button>
+        <h5 className="font-bold">Tus datos</h5>
       </div>
 
-      {/* Cart summary chip — giveaway omits price, paid shows total */}
-      <div className={`rounded-3 p-3 mb-4 d-flex justify-content-between align-items-center ${isGiveaway ? 'bg-success text-white' : 'bg-primary text-white'}`}>
+      {/* Cart summary chip */}
+      <div className={`rounded-xl p-3 flex justify-between items-center ${isGiveaway ? 'bg-emerald-600' : 'bg-primary'} text-white`}>
         <div>
-          <div className="fw-bold">
-            {cart.length} boleto{cart.length !== 1 ? 's' : ''} seleccionado{cart.length !== 1 ? 's' : ''}
-          </div>
-          <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-            #{[...cart].sort((a, b) => a - b).join(', #')}
-          </div>
+          <div className="font-bold">{cart.length} boleto{cart.length !== 1 ? 's' : ''} seleccionado{cart.length !== 1 ? 's' : ''}</div>
+          <div className="text-sm opacity-85">#{[...cart].sort((a, b) => a - b).join(', #')}</div>
         </div>
         {isGiveaway
-          ? <span className="badge bg-white text-success fw-bold">GRATIS</span>
-          : <div className="fs-5 fw-bold">{formatMXN(totalAmount)}</div>
-        }
+          ? <Badge variant="outline" className="bg-white text-emerald-600 border-0 font-bold">GRATIS</Badge>
+          : <div className="text-xl font-bold">{formatMXN(totalAmount)}</div>}
       </div>
 
-      {/* Name */}
-      <div className="mb-3">
-        <label className="form-label fw-medium">
-          Nombre completo <span className="text-danger">*</span>
-        </label>
-        <input
-          type="text"
-          className={`form-control form-control-lg ${fieldErrors.name ? 'is-invalid' : ''}`}
-          value={buyer.name}
-          onChange={e => { setBuyer(b => ({ ...b, name: e.target.value })); setFieldErrors(f => ({ ...f, name: null })) }}
-          placeholder="Juan García López"
-          autoComplete="name"
-          style={{ minHeight: 52 }}
-        />
-        {fieldErrors.name && <div className="invalid-feedback">{fieldErrors.name}</div>}
-        <div className="form-text">Nombre y apellido — requeridos para contactar al ganador.</div>
+      <div className="space-y-2">
+        <Label className="font-medium">Nombre completo <span className="text-red-500">*</span></Label>
+        <Input className={`h-[52px] text-base ${fieldErrors.name ? 'border-red-500' : ''}`}
+          value={buyer.name} onChange={e => { setBuyer(b => ({ ...b, name: e.target.value })); setFieldErrors(f => ({ ...f, name: null })) }}
+          placeholder="Juan García López" autoComplete="name" />
+        {fieldErrors.name && <p className="text-red-500 text-sm">{fieldErrors.name}</p>}
+        <p className="text-xs text-muted-foreground">Nombre y apellido — requeridos para contactar al ganador.</p>
       </div>
 
-      {/* Phone */}
-      <div className="mb-3">
-        <label className="form-label fw-medium">
-          Teléfono <span className="text-danger">*</span>
-        </label>
-        <input
-          type="tel"
-          inputMode="tel"
-          className={`form-control form-control-lg ${fieldErrors.phone ? 'is-invalid' : ''}`}
-          value={buyer.phone}
-          onChange={e => { setBuyer(b => ({ ...b, phone: e.target.value })); setFieldErrors(f => ({ ...f, phone: null })) }}
-          placeholder="644 000 0000"
-          autoComplete="tel"
-          style={{ minHeight: 52 }}
-        />
-        {fieldErrors.phone && <div className="invalid-feedback">{fieldErrors.phone}</div>}
+      <div className="space-y-2">
+        <Label className="font-medium">Teléfono <span className="text-red-500">*</span></Label>
+        <Input type="tel" inputMode="tel" className={`h-[52px] text-base ${fieldErrors.phone ? 'border-red-500' : ''}`}
+          value={buyer.phone} onChange={e => { setBuyer(b => ({ ...b, phone: e.target.value })); setFieldErrors(f => ({ ...f, phone: null })) }}
+          placeholder="644 000 0000" autoComplete="tel" />
+        {fieldErrors.phone && <p className="text-red-500 text-sm">{fieldErrors.phone}</p>}
       </div>
 
-      {/* Email */}
-      <div className="mb-3">
-        <label className="form-label fw-medium">
-          Correo electrónico <span className="text-danger">*</span>
-        </label>
-        <input
-          type="email"
-          inputMode="email"
-          className={`form-control form-control-lg ${fieldErrors.email ? 'is-invalid' : ''}`}
-          value={buyer.email}
-          onChange={e => { setBuyer(b => ({ ...b, email: e.target.value })); setFieldErrors(f => ({ ...f, email: null })) }}
-          placeholder="tu@correo.com"
-          autoComplete="email"
-          style={{ minHeight: 52 }}
-        />
-        {fieldErrors.email && <div className="invalid-feedback">{fieldErrors.email}</div>}
-        <div className="form-text">Te enviaremos la confirmación de tu participación.</div>
+      <div className="space-y-2">
+        <Label className="font-medium">Correo electrónico <span className="text-red-500">*</span></Label>
+        <Input type="email" inputMode="email" className={`h-[52px] text-base ${fieldErrors.email ? 'border-red-500' : ''}`}
+          value={buyer.email} onChange={e => { setBuyer(b => ({ ...b, email: e.target.value })); setFieldErrors(f => ({ ...f, email: null })) }}
+          placeholder="tu@correo.com" autoComplete="email" />
+        {fieldErrors.email && <p className="text-red-500 text-sm">{fieldErrors.email}</p>}
+        <p className="text-xs text-muted-foreground">Te enviaremos la confirmación de tu participación.</p>
       </div>
 
-      {/* Marketing consent — both modes, pre-checked opt-out (LFPDPPP) */}
-      <div className="form-check mb-4 p-3 bg-light rounded-3">
-        <input
-          className="form-check-input"
-          type="checkbox"
-          id="marketingConsent"
-          checked={marketingConsent}
+      <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+        <input type="checkbox" id="marketingConsent" checked={marketingConsent}
           onChange={e => setMarketingConsent(e.target.checked)}
-          style={{ width: '1.1em', height: '1.1em' }}
-        />
-        <label className="form-check-label ms-2 small" htmlFor="marketingConsent">
+          className="mt-1 h-4 w-4 rounded accent-primary" />
+        <label htmlFor="marketingConsent" className="text-sm">
           Acepto recibir información sobre futuros sorteos y promociones.
         </label>
       </div>
 
-      <button
-        className={`btn w-100 ${isGiveaway ? 'btn-success' : 'btn-primary'}`}
-        onClick={handleInfoNext}
-        style={{ minHeight: 52, fontSize: '1rem', fontWeight: 600 }}
-      >
+      <Button className={`w-full h-[52px] text-base font-semibold ${isGiveaway ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+        onClick={handleInfoNext}>
         {isGiveaway ? 'Revisar mi participación' : 'Revisar mi compra'}
-      </button>
+      </Button>
     </div>
   )
 
-  // ────────────────────────────────────────────────────────────────────────
   // STEP 3: CONFIRM
-  // ────────────────────────────────────────────────────────────────────────
   if (step === STEPS.CONFIRM) return (
-    <div>
-      <div className="d-flex align-items-center gap-2 mb-4">
-        <button className="btn btn-sm btn-outline-secondary" onClick={() => setStep(STEPS.INFO)}>
-          ← Editar datos
-        </button>
-        <h5 className="mb-0">
-          {isGiveaway ? 'Confirma tu participación' : 'Confirmar compra'}
-        </h5>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => setStep(STEPS.INFO)}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Editar datos
+        </Button>
+        <h5 className="font-bold">{isGiveaway ? 'Confirma tu participación' : 'Confirmar compra'}</h5>
       </div>
 
-      <div className="card mb-4">
-        <div className="card-body">
-          <h6 className="text-muted mb-3">Resumen</h6>
-          <table className="table table-sm table-borderless mb-0">
-            <tbody>
-              <tr>
-                <td className="text-muted">Sorteo</td>
-                <td className="fw-medium">{sorteo.title}</td>
-              </tr>
-              <tr>
-                <td className="text-muted">
-                  {isGiveaway ? 'Números' : 'Boletos'}
-                </td>
-                <td className="fw-medium">
-                  {cart.length} × #{[...cart].sort((a, b) => a - b).join(', #')}
-                </td>
-              </tr>
-              {!isGiveaway && (
-                <>
-                  <tr>
-                    <td className="text-muted">Precio unitario</td>
-                    <td>{formatMXN(sorteo.price_per_boleto)}</td>
-                  </tr>
-                  <tr className="fw-bold">
-                    <td>Total</td>
-                    <td className="text-success">{formatMXN(totalAmount)}</td>
-                  </tr>
-                </>
-              )}
-              <tr>
-                <td className="text-muted">Nombre</td>
-                <td>{buyer.name}</td>
-              </tr>
-              <tr>
-                <td className="text-muted">Teléfono</td>
-                <td>{buyer.phone}</td>
-              </tr>
-              <tr>
-                <td className="text-muted">Correo</td>
-                <td>{buyer.email}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Payment placeholder — ONLY for paid sorteos */}
-      {!isGiveaway && (
-        <div className="alert alert-info d-flex gap-3 mb-4">
-          <span style={{ fontSize: '1.5rem' }}>💳</span>
-          <div>
-            <strong>Pago en proceso de integración</strong>
-            <div className="small mt-1">
-              Tu reserva quedará registrada como pendiente.
-              El coordinador del sorteo te contactará para confirmar el pago.
-            </div>
+      <Card>
+        <CardContent className="pt-4 space-y-2">
+          <h6 className="text-muted-foreground mb-2">Resumen</h6>
+          <div className="text-sm space-y-1.5">
+            <div className="flex justify-between"><span className="text-muted-foreground">Sorteo</span><span className="font-medium">{sorteo.title}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">{isGiveaway ? 'Números' : 'Boletos'}</span><span className="font-medium">{cart.length} × #{[...cart].sort((a, b) => a - b).join(', #')}</span></div>
+            {!isGiveaway && <>
+              <div className="flex justify-between"><span className="text-muted-foreground">Precio unitario</span><span>{formatMXN(sorteo.price_per_boleto)}</span></div>
+              <div className="flex justify-between font-bold"><span>Total</span><span className="text-emerald-600">{formatMXN(totalAmount)}</span></div>
+            </>}
+            <div className="flex justify-between"><span className="text-muted-foreground">Nombre</span><span>{buyer.name}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Teléfono</span><span>{buyer.phone}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Correo</span><span>{buyer.email}</span></div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {!isGiveaway && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <CreditCard className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Pago en proceso de integración</strong>
+            <p className="text-sm mt-1">Tu reserva quedará registrada como pendiente. El coordinador del sorteo te contactará para confirmar el pago.</p>
+          </AlertDescription>
+        </Alert>
       )}
 
-      {submitError && <div className="alert alert-danger mb-3">{submitError}</div>}
+      {submitError && <Alert variant="destructive"><AlertDescription>{submitError}</AlertDescription></Alert>}
 
-      <button
-        className={`btn w-100 ${isGiveaway ? 'btn-success' : 'btn-success'}`}
-        onClick={handlePurchase}
-        disabled={submitting}
-        style={{ minHeight: 56, fontSize: '1.05rem', fontWeight: 700 }}
-      >
+      <Button className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700"
+        onClick={handlePurchase} disabled={submitting}>
         {submitting
-          ? <><span className="spinner-border spinner-border-sm me-2" />Registrando...</>
-          : isGiveaway
-            ? 'Confirmar participación'
-            : `Confirmar — ${formatMXN(totalAmount)}`
-        }
-      </button>
+          ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Registrando...</>
+          : isGiveaway ? 'Confirmar participación' : `Confirmar — ${formatMXN(totalAmount)}`}
+      </Button>
     </div>
   )
 
-  // ────────────────────────────────────────────────────────────────────────
   // STEP 4: SUCCESS
-  // ────────────────────────────────────────────────────────────────────────
   if (step === STEPS.SUCCESS && purchaseResult) return (
-    <div className="text-center py-4">
-      <div
-        className="rounded-circle bg-success d-flex align-items-center justify-content-center mx-auto mb-4"
-        style={{ width: 80, height: 80 }}
-      >
-        <span style={{ fontSize: '2.5rem' }}>✓</span>
+    <div className="text-center py-8">
+      <div className="rounded-full bg-emerald-600 flex items-center justify-center mx-auto mb-4 w-20 h-20">
+        <span className="text-white text-4xl">✓</span>
       </div>
+      <h3 className="text-2xl font-bold text-emerald-600 mb-1">{isGiveaway ? '¡Estás participando!' : '¡Boletos registrados!'}</h3>
+      <p className="text-muted-foreground mb-4">{sorteo.title}</p>
 
-      <h3 className="fw-bold text-success mb-1">
-        {isGiveaway ? '¡Estás participando!' : '¡Boletos registrados!'}
-      </h3>
-      <p className="text-muted mb-4">{sorteo.title}</p>
-
-      <div className="card mb-4 text-start">
-        <div className="card-body">
-          <div className="row g-2">
-            <div className="col-12">
-              <div className="text-muted small">
-                {isGiveaway ? 'Tus números' : 'Boletos'}
-              </div>
-              <div className="d-flex flex-wrap gap-2 mt-1">
-                {purchaseResult.claimed.map(c => (
-                  <span key={c.sale_id} className="badge bg-primary fs-6">
-                    #{c.boleto_numero}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {!isGiveaway && (
-              <div className="col-6">
-                <div className="text-muted small">Total</div>
-                <div className="fw-bold text-success">
-                  {formatMXN(purchaseResult.total_amount_mxn)}
-                </div>
-              </div>
-            )}
-
-            <div className={isGiveaway ? 'col-12' : 'col-6'}>
-              <div className="text-muted small">Estado</div>
-              {/* Giveaway: DB auto-confirms → show Confirmado.
-                  Paid: pending until Stripe (Phase 6) */}
-              {isGiveaway
-                ? <span className="badge bg-success">✓ Confirmado</span>
-                : <span className="badge bg-warning text-dark">Pendiente de pago</span>
-              }
+      <Card className="mb-4 text-left">
+        <CardContent className="pt-4 space-y-2">
+          <div>
+            <div className="text-muted-foreground text-sm">{isGiveaway ? 'Tus números' : 'Boletos'}</div>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {purchaseResult.claimed.map(c => (
+                <Badge key={c.sale_id} className="text-base">{`#${c.boleto_numero}`}</Badge>
+              ))}
             </div>
           </div>
-        </div>
-      </div>
+          {!isGiveaway && (
+            <div><div className="text-muted-foreground text-sm">Total</div><div className="font-bold text-emerald-600">{formatMXN(purchaseResult.total_amount_mxn)}</div></div>
+          )}
+          <div>
+            <div className="text-muted-foreground text-sm">Estado</div>
+            {isGiveaway
+              ? <Badge className="bg-emerald-600 hover:bg-emerald-600">✓ Confirmado</Badge>
+              : <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400">Pendiente de pago</Badge>}
+          </div>
+        </CardContent>
+      </Card>
 
-      <p className="text-muted small mb-4">
+      <p className="text-muted-foreground text-sm mb-4">
         Guarda tus números.
         {buyer.email && <> Te enviaremos información a <strong>{buyer.email}</strong>.</>}
       </p>
-
-      <button className="btn btn-outline-primary w-100" onClick={onBack}>
-        Volver al sorteo
-      </button>
+      <Button variant="outline" className="w-full" onClick={onBack}>Volver al sorteo</Button>
     </div>
   )
 
