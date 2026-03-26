@@ -33,7 +33,8 @@ export function SorteoCard({ sorteo }) {
           <img
             src="/RafikiIcon01.png"
             alt="Rafiki"
-            className="h-14 opacity-40"
+            className="h-24 opacity-40"
+            style={{ filter: 'brightness(0) invert(1)' }}
           />
         </div>
 
