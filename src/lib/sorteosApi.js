@@ -46,7 +46,7 @@ export async function fetchPublicSorteosByOrg(orgSlug) {
     .from('public_sorteo_detail')
     .select('*')
     .eq('org_slug', orgSlug)
-    .order('created_at', { ascending: false })
+    .order('start_date', { ascending: false })
   return { data, error }
 }
 
@@ -54,7 +54,7 @@ export async function fetchAllPublicSorteos() {
   const { data, error } = await supabase
     .from('public_sorteo_detail')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('start_date', { ascending: false })
   return { data: data || [], error }
 }
 

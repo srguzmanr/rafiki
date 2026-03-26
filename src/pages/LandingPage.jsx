@@ -23,11 +23,16 @@ const WA_CTA = 'https://wa.me/524421568386?text=Hola%2C%20quiero%20crear%20mi%20
 export function LandingPage() {
   const [sorteos, setSorteos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [filter, setFilter] = useState('todos')
   const [sort, setSort] = useState('recientes')
 
   useEffect(() => {
-    fetchAllPublicSorteos().then(({ data }) => {
+    fetchAllPublicSorteos().then(({ data, error }) => {
+      if (error) {
+        console.error('[LandingPage] Failed to load sorteos:', error)
+        setError('No se pudieron cargar los sorteos.')
+      }
       setSorteos(data || [])
       setLoading(false)
     })
