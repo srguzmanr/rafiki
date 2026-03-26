@@ -3,6 +3,7 @@
 
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
+import { WhatsAppButton } from '../components/WhatsAppButton'
 
 export function TermsPage() {
   return (
@@ -291,6 +292,8 @@ export function TermsPage() {
           <p>&copy; 2026 Servicios Comerciales Rafiki</p>
         </div>
       </main>
+
+      <WhatsAppButton />
     </div>
   )
 }

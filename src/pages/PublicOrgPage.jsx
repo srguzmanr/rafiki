@@ -6,6 +6,7 @@ import { fetchPublicSorteosByOrg } from '../lib/participanteApi'
 import { LoadingSpinner, ErrorMessage, StatusBadge, SalesProgressBar, formatMXN } from '../components/shared/UI'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { WhatsAppButton } from '../components/WhatsAppButton'
 
 export function PublicOrgPage() {
   const { orgSlug } = useParams()
@@ -95,6 +96,8 @@ export function PublicOrgPage() {
           ))}
         </div>
       </div>
+
+      <WhatsAppButton />
     </div>
   )
 }

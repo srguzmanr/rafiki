@@ -50,6 +50,14 @@ export async function fetchPublicSorteosByOrg(orgSlug) {
   return { data, error }
 }
 
+export async function fetchAllPublicSorteos() {
+  const { data, error } = await supabase
+    .from('public_sorteo_detail')
+    .select('*')
+    .order('created_at', { ascending: false })
+  return { data: data || [], error }
+}
+
 // ─── WRITE ─────────────────────────────────────────────────────────────────
 
 export async function createSorteo(orgId, userId, formData) {

@@ -4,6 +4,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 import { Login }                 from './pages/Login'
+import { LandingPage }           from './pages/LandingPage'
 import { OrgDashboard }          from './pages/OrgDashboard'
 import { VendedorDashboard }     from './pages/VendedorDashboard'
 import { ParticipanteDashboard } from './pages/ParticipanteDashboard'
@@ -24,8 +25,10 @@ function HomeRoute() {
     </div>
   )
 
-  if (!session) return <Login />
+  // Unauthenticated users see the public landing page
+  if (!session) return <LandingPage />
 
+  // Authenticated users go to their dashboard
   switch (role) {
     case 'admin':        return <AdminDashboard />
     case 'organizador':  return <OrgDashboard />
@@ -51,6 +54,7 @@ export default function App() {
       <HashRouter>
         <Routes>
           <Route path="/"                          element={<HomeRoute />} />
+          <Route path="/login"                     element={<Login />} />
           <Route path="/mis-boletos"               element={<ParticipanteDashboard />} />
           <Route path="/org/:orgSlug"              element={<PublicOrgPage />} />
           <Route path="/sorteo/:orgSlug/:sorteoId" element={<PublicSorteoPage />} />
