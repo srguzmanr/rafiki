@@ -3,6 +3,7 @@
 // role and App.jsx routes to the correct dashboard.
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +15,7 @@ import { Link } from 'react-router-dom'
 
 export function Login() {
   const { signIn } = useAuth()
+  const navigate = useNavigate()
 
   const [email, setEmail]     = useState('')
   const [password, setPassword] = useState('')
@@ -30,6 +32,9 @@ export function Login() {
     if (error) {
       setError('Correo o contraseña incorrectos. Intenta de nuevo.')
       setLoading(false)
+    } else {
+      // Auth succeeded — navigate to home which redirects to the correct dashboard
+      navigate('/', { replace: true })
     }
   }
 

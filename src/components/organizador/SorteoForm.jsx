@@ -151,15 +151,22 @@ function SorteoFormInner({ sorteo, orgId, userId, onSaved, onCancel }) {
 
   async function uploadImages(sorteoId) {
     const uploaded = []
+    const errors = []
     for (const img of images) {
       if (img.storage_path) {
         uploaded.push({ storage_path: img.storage_path })
       } else if (img.file) {
-        setStep(`Subiendo imagen ${uploaded.length + 1}...`)
+        setStep(`Subiendo imagen ${uploaded.length + 1} de ${images.filter(i => i.file || i.storage_path).length}...`)
         const { path, error } = await uploadSorteoImage(orgId, sorteoId, img.file)
-        if (error) console.warn('[SorteoForm] Image upload error:', error)
+        if (error) {
+          console.error('[SorteoForm] Image upload error:', error)
+          errors.push(img.file.name)
+        }
         if (path) uploaded.push({ storage_path: path })
       }
+    }
+    if (errors.length > 0) {
+      setError(`No se pudieron subir ${errors.length} imagen(es). Verifica que el bucket "sorteo-images" exista en Supabase Storage.`)
     }
     return uploaded
   }
